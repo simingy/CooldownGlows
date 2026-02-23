@@ -1,0 +1,16 @@
+## Interface: 120000, 120001
+## Title: CooldownGlows
+## Notes: Flashes a proc glow on action bar buttons when spell cooldowns end.
+## Author: Simon
+## Version: 1.0.0
+## SavedVariables: CooldownGlowsDB
+
+Libs\LibStub\LibStub.lua
+Libs\LibCustomGlow-1.0\LibCustomGlow-1.0.lua
+
+Glows.lua
+ActionBars.lua
+Cooldowns.lua
+SpellHelperUI.lua
+OptionsUI.lua
+Core.lua
