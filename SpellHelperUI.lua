@@ -30,7 +30,7 @@ function addon.ShowSpellHelper(activeProfileFrame)
         h.headerIcon:SetText("Spell Name")
         
         h.headerID = h:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        h.headerID:SetPoint("TOPRIGHT", h, "TOPRIGHT", -55, -30)
+        h.headerID:SetPoint("TOPRIGHT", h, "TOPRIGHT", -35, -30)
         h.headerID:SetText("Spell ID")
 
         h.scroll = CreateFrame("ScrollFrame", nil, h, "UIPanelScrollFrameTemplate")
@@ -41,13 +41,30 @@ function addon.ShowSpellHelper(activeProfileFrame)
         h.scroll:SetScrollChild(h.content)
 
         addon.SpellHelperFrame = h
+        
+        -- Close when Settings closes
+        if SettingsPanel then
+            SettingsPanel:HookScript("OnHide", function() addon.SpellHelperFrame:Hide() end)
+        end
+        if addon.OptionsFrame then
+            addon.OptionsFrame:HookScript("OnHide", function() addon.SpellHelperFrame:Hide() end)
+        end
     end
     
-    -- Re-anchor if opened again
-    if addon.SpellHelperFrame:IsVisible() then
+    -- Mutually exclusive with Item Helper
+    if addon.ItemHelperFrame and addon.ItemHelperFrame:IsShown() then
+        addon.ItemHelperFrame:Hide()
+    end
+    
+    -- Re-anchor if opened from closed state
+    if not addon.SpellHelperFrame:IsShown() then
+        addon.SpellHelperFrame:ClearAllPoints()
         if SettingsPanel and SettingsPanel:IsShown() then
-            addon.SpellHelperFrame:ClearAllPoints()
             addon.SpellHelperFrame:SetPoint("TOPLEFT", SettingsPanel, "TOPRIGHT", 10, 0)
+        elseif addon.OptionsFrame and addon.OptionsFrame:IsShown() then
+            addon.SpellHelperFrame:SetPoint("TOPLEFT", addon.OptionsFrame, "TOPRIGHT", 10, 0)
+        else
+            addon.SpellHelperFrame:SetPoint("CENTER")
         end
     end
     
