@@ -21,7 +21,7 @@ end
 -- ═══ Color Dropdown Helper ═══
 local colorDropdownCounter = 0
 
-local function CreateColorDropdown(parent, anchorFrame, anchorPoint, xOff, yOff, selectedKey, onSelect)
+function addon.CreateColorDropdown(parent, anchorFrame, anchorPoint, xOff, yOff, selectedKey, onSelect)
     colorDropdownCounter = colorDropdownCounter + 1
     local name = "CooldownGlowsColorDD" .. colorDropdownCounter
     local dd = CreateFrame("Frame", name, parent, "UIDropDownMenuTemplate")
@@ -64,33 +64,41 @@ local function CreateColorDropdown(parent, anchorFrame, anchorPoint, xOff, yOff,
 end
 
 -- ═══ Color Swatch for Tracked List ═══
-local function CreateColorSwatch(parent, row, colorKey, onClick)
-    local swatch = CreateFrame("Button", nil, row)
-    swatch:SetSize(14, 14)
+local function CreateColorSwatch(parent, anchorTo, colorKey)
+    local swatch = CreateFrame("Frame", nil, anchorTo)
+    
+    local isDefault = (colorKey == nil or colorKey == "default")
     local entry = addon.GLOW_COLOR_MAP[colorKey or "default"]
-    local tex = swatch:CreateTexture(nil, "ARTWORK")
-    tex:SetAllPoints()
-    if entry and entry.color then
-        tex:SetColorTexture(entry.color[1], entry.color[2], entry.color[3], 1)
+    
+    if isDefault then
+        swatch:SetSize(40, 14)
+        local text = swatch:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        text:SetPoint("LEFT", 0, 0)
+        text:SetText("Default")
+        
+        swatch:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText("Color: Default", 1, 1, 1)
+            GameTooltip:Show()
+        end)
     else
-        tex:SetColorTexture(0.9, 0.8, 0.2, 1)
-    end
-    swatch.tex = tex
-    swatch:SetScript("OnClick", function()
-        -- Cycle to next color
-        local currentIdx = 1
-        for i, c in ipairs(addon.GLOW_COLORS) do
-            if c.key == (colorKey or "default") then currentIdx = i; break end
+        swatch:SetSize(14, 14)
+        local tex = swatch:CreateTexture(nil, "OVERLAY")
+        tex:SetAllPoints()
+        if entry and entry.color then
+            tex:SetColorTexture(entry.color[1], entry.color[2], entry.color[3], 1)
+        else
+            tex:SetColorTexture(1, 1, 1, 1) -- White fallback
         end
-        local nextIdx = (currentIdx % #addon.GLOW_COLORS) + 1
-        if onClick then onClick(addon.GLOW_COLORS[nextIdx].key) end
-    end)
-    swatch:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        local name = entry and entry.name or "Default"
-        GameTooltip:SetText("Color: " .. name .. " (click to cycle)", 1, 1, 1)
-        GameTooltip:Show()
-    end)
+        
+        swatch:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            local name = entry and entry.name or "Unknown"
+            GameTooltip:SetText("Color: " .. name, 1, 1, 1)
+            GameTooltip:Show()
+        end)
+    end
+    
     swatch:SetScript("OnLeave", function() GameTooltip:Hide() end)
     return swatch
 end
@@ -107,13 +115,14 @@ local function BuildProfileContent(container, profileKey)
     
     -- ═══ REFRESH TRACKED LIST ═══
     local function RefreshTrackedList()
-        ClearChildren(container.listContent)
-        local yOffset = -5
+        if container.spellContent then ClearChildren(container.spellContent) end
+        if container.itemContent then ClearChildren(container.itemContent) end
         
         local profile = CooldownGlowsDB[profileKey]
         if not profile then return end
         
         -- Render Spells
+        local spellYOffset = -5
         if profile.spells and next(profile.spells) then
             local sortedSpells = {}
             for spellID, entry in pairs(profile.spells) do
@@ -135,9 +144,9 @@ local function BuildProfileContent(container, profileKey)
                     isActuallyKnown = (addon.knownSpells[spell.id] == true)
                 end
 
-                local row = CreateFrame("Frame", nil, container.listContent)
-                row:SetSize(500, 26)
-                row:SetPoint("TOPLEFT", 0, yOffset)
+                local row = CreateFrame("Frame", nil, container.spellContent)
+                row:SetSize(470, 26)
+                row:SetPoint("TOPLEFT", 0, spellYOffset)
                 
                 local highlight = row:CreateTexture(nil, "HIGHLIGHT")
                 highlight:SetAllPoints()
@@ -148,7 +157,7 @@ local function BuildProfileContent(container, profileKey)
                 
                 local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
                 nameText:SetPoint("LEFT", 8, 0)
-                nameText:SetWidth(200)
+                nameText:SetWidth(180)
                 nameText:SetJustifyH("LEFT")
                 nameText:SetText(string.format("|T%s:14:14:0:0|t  %s%s|r", spell.icon, colorHex, spell.name))
 
@@ -166,18 +175,18 @@ local function BuildProfileContent(container, profileKey)
                 
                 local charText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
                 charText:SetPoint("LEFT", durText, "RIGHT", 0, 0)
-                charText:SetWidth(30)
+                charText:SetWidth(40)
                 charText:SetJustifyH("CENTER")
-                if spell.charges > 0 then
-                    charText:SetText(string.format("%s%sch|r", colorHex, spell.charges))
+                
+                local chargeInfo = C_Spell.GetSpellCharges(spell.id)
+                if chargeInfo then
+                    local displayC = spell.charges > 0 and tostring(spell.charges) or "max"
+                    charText:SetText(string.format("%s%sch|r", colorHex, displayC))
                 else
                     charText:SetText("")
                 end
                 
-                local swatch = CreateColorSwatch(container, row, spell.color, function(newKey)
-                    profile.spells[spell.id] = { duration = spell.duration, color = newKey, charges = spell.charges }
-                    RefreshTrackedList()
-                end)
+                local swatch = CreateColorSwatch(container, row, spell.color)
                 swatch:SetPoint("LEFT", charText, "RIGHT", 8, 0)
 
                 if not isActuallyKnown then
@@ -189,6 +198,41 @@ local function BuildProfileContent(container, profileKey)
                 local removeBtn = CreateFrame("Button", nil, row)
                 removeBtn:SetPoint("RIGHT", -5, 0)
                 removeBtn:SetSize(16, 16)
+                
+                local editBtn = CreateFrame("Button", nil, row)
+                editBtn:SetPoint("RIGHT", removeBtn, "LEFT", -5, 0)
+                editBtn:SetSize(16, 16)
+                editBtn:SetNormalTexture("Interface\\Buttons\\UI-OptionsButton")
+                editBtn:SetHighlightTexture("Interface\\Buttons\\UI-OptionsButton", "ADD")
+                editBtn:SetScript("OnEnter", function(self)
+                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                    GameTooltip:SetText("Edit spell", 1, 1, 1)
+                    GameTooltip:Show()
+                end)
+                editBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+                editBtn:SetScript("OnClick", function()
+                    addon.ShowSpellHelper(container, profileKey, true)
+                    local h = addon.SpellHelperFrame
+                    if h then
+                        h.isEditing = true
+                        h.idInput:SetText(tostring(spell.id))
+                        h.durInput:SetText(tostring(spell.duration))
+                        h.chargeInput:SetText(tostring(spell.charges or 0))
+                        
+                        h.colorDD.selectedKey = spell.color
+                        local entry = addon.GLOW_COLOR_MAP[spell.color or "default"]
+                        if entry and entry.color then
+                            local r, g, b = entry.color[1], entry.color[2], entry.color[3]
+                            UIDropDownMenu_SetText(h.colorDD, string.format("|cff%02x%02x%02x%s|r", r*255, g*255, b*255, entry.name))
+                        else
+                            UIDropDownMenu_SetText(h.colorDD, "Default")
+                        end
+                        
+                        h.addBtn:SetText("Save Spell")
+                        h.UpdateSpellPreview(tostring(spell.id))
+                    end
+                end)
+                
                 removeBtn:SetNormalTexture("Interface\\Buttons\\UI-GroupLoot-Pass-Up")
                 removeBtn:SetHighlightTexture("Interface\\Buttons\\UI-GroupLoot-Pass-Highlight")
                 removeBtn:SetScript("OnEnter", function(self)
@@ -205,20 +249,17 @@ local function BuildProfileContent(container, profileKey)
                     end
                 end)
                 
-                yOffset = yOffset - 26
+                spellYOffset = spellYOffset - 26
             end
+        end
+        if container.spellContent then container.spellContent:SetHeight(math.abs(spellYOffset) + 5) end
+        if container.spellEmpty then
+            if profile.spells and next(profile.spells) then container.spellEmpty:Hide() else container.spellEmpty:Show() end
         end
         
         -- Render Items
+        local itemYOffset = -5
         if profile.items and next(profile.items) then
-            local sepFrame = CreateFrame("Frame", nil, container.listContent)
-            sepFrame:SetSize(500, 20)
-            sepFrame:SetPoint("TOPLEFT", 0, yOffset - 4)
-            local sepLabel = sepFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-            sepLabel:SetPoint("LEFT", 8, 0)
-            sepLabel:SetText("|cffccaa00— Items —|r")
-            yOffset = yOffset - 24
-            
             local sortedItems = {}
             for itemID, entry in pairs(profile.items) do
                 local name, _, _, _, _, _, _, _, _, icon = C_Item.GetItemInfo(itemID)
@@ -238,19 +279,19 @@ local function BuildProfileContent(container, profileKey)
                     isOnBar = addon.IsItemOnActionBar(item.id)
                 end
                 
-                local row = CreateFrame("Frame", nil, container.listContent)
-                row:SetSize(500, 26)
-                row:SetPoint("TOPLEFT", 0, yOffset)
+                local row = CreateFrame("Frame", nil, container.itemContent)
+                row:SetSize(470, 26)
+                row:SetPoint("TOPLEFT", 0, itemYOffset)
                 
                 local highlight = row:CreateTexture(nil, "HIGHLIGHT")
                 highlight:SetAllPoints()
-                highlight:SetColorTexture(1, 1, 1, 0.05)
+                highlight:SetColorTexture(1, 1, 0.6, 0.05)
                 
                 local colorHex = isOnBar and "|cffccaa00" or "|cff666666"
                 
                 local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
                 nameText:SetPoint("LEFT", 8, 0)
-                nameText:SetWidth(200)
+                nameText:SetWidth(180)
                 nameText:SetJustifyH("LEFT")
                 nameText:SetText(string.format("|T%s:14:14:0:0|t  %s%s|r", item.icon, colorHex, item.name))
 
@@ -266,10 +307,7 @@ local function BuildProfileContent(container, profileKey)
                 durText:SetJustifyH("CENTER")
                 durText:SetText(string.format("%s%ss|r", colorHex, item.duration))
                 
-                local swatch = CreateColorSwatch(container, row, item.color, function(newKey)
-                    profile.items[item.id] = { duration = item.duration, color = newKey }
-                    RefreshTrackedList()
-                end)
+                local swatch = CreateColorSwatch(container, row, item.color)
                 swatch:SetPoint("LEFT", durText, "RIGHT", 8, 0)
 
                 if not isOnBar then
@@ -281,6 +319,40 @@ local function BuildProfileContent(container, profileKey)
                 local removeBtn = CreateFrame("Button", nil, row)
                 removeBtn:SetPoint("RIGHT", -5, 0)
                 removeBtn:SetSize(16, 16)
+                
+                local editBtn = CreateFrame("Button", nil, row)
+                editBtn:SetPoint("RIGHT", removeBtn, "LEFT", -5, 0)
+                editBtn:SetSize(16, 16)
+                editBtn:SetNormalTexture("Interface\\Buttons\\UI-OptionsButton")
+                editBtn:SetHighlightTexture("Interface\\Buttons\\UI-OptionsButton", "ADD")
+                editBtn:SetScript("OnEnter", function(self)
+                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                    GameTooltip:SetText("Edit item", 1, 1, 1)
+                    GameTooltip:Show()
+                end)
+                editBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+                editBtn:SetScript("OnClick", function()
+                    addon.ShowItemHelper(container, profileKey, true)
+                    local h = addon.ItemHelperFrame
+                    if h then
+                        h.isEditing = true
+                        h.idInput:SetText(tostring(item.id))
+                        h.durInput:SetText(tostring(item.duration))
+                        
+                        h.colorDD.selectedKey = item.color
+                        local entry = addon.GLOW_COLOR_MAP[item.color or "default"]
+                        if entry and entry.color then
+                            local r, g, b = entry.color[1], entry.color[2], entry.color[3]
+                            UIDropDownMenu_SetText(h.colorDD, string.format("|cff%02x%02x%02x%s|r", r*255, g*255, b*255, entry.name))
+                        else
+                            UIDropDownMenu_SetText(h.colorDD, "Default")
+                        end
+                        
+                        h.addBtn:SetText("Save Item")
+                        h.UpdateItemPreview(tostring(item.id))
+                    end
+                end)
+                
                 removeBtn:SetNormalTexture("Interface\\Buttons\\UI-GroupLoot-Pass-Up")
                 removeBtn:SetHighlightTexture("Interface\\Buttons\\UI-GroupLoot-Pass-Highlight")
                 removeBtn:SetScript("OnEnter", function(self)
@@ -297,195 +369,147 @@ local function BuildProfileContent(container, profileKey)
                     end
                 end)
                 
-                yOffset = yOffset - 26
+                itemYOffset = itemYOffset - 26
             end
         end
         
-        container.listContent:SetHeight(math.abs(yOffset) + 5)
-        
-        local hasSpells = profile.spells and next(profile.spells)
-        local hasItems = profile.items and next(profile.items)
-        if hasSpells or hasItems then
-            container.emptyText:Hide()
-        else
-            container.emptyText:Show()
+        if container.itemContent then container.itemContent:SetHeight(math.abs(itemYOffset) + 5) end
+        if container.itemEmpty then
+            if profile.items and next(profile.items) then container.itemEmpty:Hide() else container.itemEmpty:Show() end
         end
     end
     
     container.RefreshTrackedList = RefreshTrackedList
     
-    -- ═══ ADD SPELL ROW ═══
-    local spellLabel = container:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    spellLabel:SetPoint("TOPLEFT", 0, 0)
-    spellLabel:SetText("Add Spell")
+    -- ═══ HEADERS AND FRAMES ═══
+    -- ** Spells Section **
+    local spellTitle = container:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    spellTitle:SetPoint("TOPLEFT", 5, -5)
+    spellTitle:SetText("Spells")
     
-    container.spellInput = CreateFrame("EditBox", nil, container, "InputBoxTemplate")
-    container.spellInput:SetSize(80, 20)
-    container.spellInput:SetPoint("LEFT", spellLabel, "RIGHT", 12, 0)
-    container.spellInput:SetAutoFocus(false)
-    container.spellInput:SetNumeric(true)
-    
-    local spellDurLabel = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    spellDurLabel:SetPoint("LEFT", container.spellInput, "RIGHT", 10, 0)
-    spellDurLabel:SetText("Duration:")
-    
-    container.spellDurationInput = CreateFrame("EditBox", nil, container, "InputBoxTemplate")
-    container.spellDurationInput:SetSize(30, 20)
-    container.spellDurationInput:SetPoint("LEFT", spellDurLabel, "RIGHT", 6, 0)
-    container.spellDurationInput:SetAutoFocus(false)
-    container.spellDurationInput:SetNumeric(true)
-    container.spellDurationInput:SetText("3")
-    
-    local spellCharLabel = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    spellCharLabel:SetPoint("LEFT", container.spellDurationInput, "RIGHT", 10, 0)
-    spellCharLabel:SetText("Charges:")
-    
-    container.spellChargeInput = CreateFrame("EditBox", nil, container, "InputBoxTemplate")
-    container.spellChargeInput:SetSize(30, 20)
-    container.spellChargeInput:SetPoint("LEFT", spellCharLabel, "RIGHT", 6, 0)
-    container.spellChargeInput:SetAutoFocus(false)
-    container.spellChargeInput:SetNumeric(true)
-    container.spellChargeInput:SetText("0")
-    container.spellChargeInput:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("Charge threshold for glow (0 = max charges)", 1, 1, 1)
-        GameTooltip:Show()
-    end)
-    container.spellChargeInput:SetScript("OnLeave", function() GameTooltip:Hide() end)
-    
-    container.spellColorDD = CreateColorDropdown(container, container.spellChargeInput, "LEFT", 6, 0, "default")
-
     local addSpellBtn = CreateFrame("Button", nil, container, "UIPanelButtonTemplate")
-    addSpellBtn:SetSize(60, 22)
-    addSpellBtn:SetPoint("LEFT", container.spellColorDD, "RIGHT", -10, 2)
-    addSpellBtn:SetText("Add")
+    addSpellBtn:SetSize(120, 24)
+    addSpellBtn:SetPoint("RIGHT", container, "TOPRIGHT", -16, -2)
+    addSpellBtn:SetText("Add Spell")
     addSpellBtn:SetScript("OnClick", function()
-        local spellID = tonumber(container.spellInput:GetText())
-        local duration = tonumber(container.spellDurationInput:GetText()) or 3
-        local charges = tonumber(container.spellChargeInput:GetText()) or 0
-        local colorKey = container.spellColorDD.selectedKey or "default"
-        if spellID and spellID > 0 then
-            local p = CooldownGlowsDB[profileKey]
-            if p then
-                p.spells[spellID] = { duration = duration, charges = charges, color = colorKey }
-                container.spellInput:SetText("")
-                container.spellDurationInput:SetText("3")
-                container.spellChargeInput:SetText("0")
-                RefreshTrackedList()
-                if isCurrentPlayer then
-                    addon.UpdateKnownSpells()
-                    addon.CheckCooldowns()
-                end
-            end
-        end
+        addon.ShowSpellHelper(container, profileKey)
     end)
     
-    local spellHelperBtn = CreateFrame("Button", nil, container, "UIPanelButtonTemplate")
-    spellHelperBtn:SetSize(90, 22)
-    spellHelperBtn:SetPoint("LEFT", addSpellBtn, "RIGHT", 5, 0)
-    spellHelperBtn:SetText("Spell Helper")
-    spellHelperBtn:SetScript("OnClick", function()
-        addon.ShowSpellHelper(container)
-    end)
+    local spellSep = container:CreateTexture(nil, "ARTWORK")
+    spellSep:SetHeight(1)
+    spellSep:SetPoint("TOPLEFT", spellTitle, "BOTTOMLEFT", 0, -10)
+    spellSep:SetPoint("RIGHT", container, "RIGHT", -16, 0)
+    spellSep:SetColorTexture(0.4, 0.4, 0.4, 0.4)
     
-    -- ═══ ADD ITEM ROW ═══
-    local itemLabel = container:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    itemLabel:SetPoint("TOPLEFT", spellLabel, "BOTTOMLEFT", 0, -16)
-    itemLabel:SetText("|cffccaa00Add Item|r")
+    local spellColName = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    spellColName:SetPoint("TOPLEFT", spellSep, "BOTTOMLEFT", 10, -6)
+    spellColName:SetText("|cffccccccName|r")
     
-    container.itemInput = CreateFrame("EditBox", nil, container, "InputBoxTemplate")
-    container.itemInput:SetSize(80, 20)
-    container.itemInput:SetPoint("LEFT", itemLabel, "RIGHT", 12, 0)
-    container.itemInput:SetAutoFocus(false)
-    container.itemInput:SetNumeric(true)
+    local spellColID = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    spellColID:SetPoint("LEFT", spellColName, "LEFT", 185, 0)
+    spellColID:SetText("|cffccccccID|r")
     
-    local itemDurLabel = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    itemDurLabel:SetPoint("LEFT", container.itemInput, "RIGHT", 10, 0)
-    itemDurLabel:SetText("Duration:")
+    local spellColDur = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    spellColDur:SetPoint("LEFT", spellColID, "LEFT", 75, 0)
+    spellColDur:SetText("|cffccccccDuration|r")
     
-    container.itemDurationInput = CreateFrame("EditBox", nil, container, "InputBoxTemplate")
-    container.itemDurationInput:SetSize(30, 20)
-    container.itemDurationInput:SetPoint("LEFT", itemDurLabel, "RIGHT", 6, 0)
-    container.itemDurationInput:SetAutoFocus(false)
-    container.itemDurationInput:SetNumeric(true)
-    container.itemDurationInput:SetText("3")
+    local spellColCharge = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    spellColCharge:SetPoint("LEFT", spellColDur, "LEFT", 50, 0)
+    spellColCharge:SetText("|cffccccccCharges|r")
     
-    container.itemColorDD = CreateColorDropdown(container, container.itemDurationInput, "LEFT", 6, 0, "default")
+    local spellColColor = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    spellColColor:SetPoint("LEFT", spellColCharge, "LEFT", 55, 0)
+    spellColColor:SetText("|cffccccccColor|r")
+    
+    local spellColAction = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    spellColAction:SetPoint("RIGHT", spellSep, "RIGHT", -22, -6)
+    spellColAction:SetText("|cffccccccAction|r")
+    
+    local spellColSep = container:CreateTexture(nil, "ARTWORK")
+    spellColSep:SetHeight(1)
+    spellColSep:SetPoint("TOPLEFT", spellColName, "BOTTOMLEFT", -5, -3)
+    spellColSep:SetPoint("RIGHT", container, "RIGHT", -16, 0)
+    spellColSep:SetColorTexture(0.3, 0.3, 0.3, 0.5)
+    
+    local spellInset = CreateFrame("Frame", nil, container, "InsetFrameTemplate")
+    spellInset:SetPoint("TOPLEFT", spellColSep, "BOTTOMLEFT", -5, -2)
+    spellInset:SetPoint("RIGHT", container, "RIGHT", -16, 0)
+    spellInset:SetHeight(190)
+    
+    local spellScroll = CreateFrame("ScrollFrame", nil, container, "UIPanelScrollFrameTemplate")
+    spellScroll:SetPoint("TOPLEFT", spellInset, "TOPLEFT", 5, -5)
+    spellScroll:SetPoint("BOTTOMRIGHT", spellInset, "BOTTOMRIGHT", -25, 5)
+    
+    container.spellContent = CreateFrame("Frame", nil, spellScroll)
+    container.spellContent:SetSize(470, 10)
+    spellScroll:SetScrollChild(container.spellContent)
+    
+    container.spellEmpty = spellInset:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    container.spellEmpty:SetPoint("CENTER", 0, 0)
+    container.spellEmpty:SetText("|cff666666No spells tracked.|r")
+    container.spellEmpty:Hide()
+    
+    -- ** Items Section **
+    local itemTitle = container:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    itemTitle:SetPoint("TOPLEFT", spellInset, "BOTTOMLEFT", 5, -15)
+    itemTitle:SetText("Items")
     
     local addItemBtn = CreateFrame("Button", nil, container, "UIPanelButtonTemplate")
-    addItemBtn:SetSize(60, 22)
-    addItemBtn:SetPoint("LEFT", container.itemColorDD, "RIGHT", -10, 2)
-    addItemBtn:SetText("Add")
+    addItemBtn:SetSize(120, 24)
+    addItemBtn:SetPoint("RIGHT", spellInset, "BOTTOMRIGHT", 0, -25)
+    addItemBtn:SetText("Add Item")
     addItemBtn:SetScript("OnClick", function()
-        local itemID = tonumber(container.itemInput:GetText())
-        local dur = tonumber(container.itemDurationInput:GetText()) or 3
-        local colorKey = container.itemColorDD.selectedKey or "default"
-        if itemID and itemID > 0 then
-            local p = CooldownGlowsDB[profileKey]
-            if p then
-                if not p.items then p.items = {} end
-                p.items[itemID] = { duration = dur, color = colorKey }
-                container.itemInput:SetText("")
-                container.itemDurationInput:SetText("3")
-                RefreshTrackedList()
-                if isCurrentPlayer then
-                    addon.ScanActionBarItems()
-                    addon.CheckItemCooldowns()
-                end
-            end
-        end
+        addon.ShowItemHelper(container, profileKey)
     end)
     
-    local itemHelperBtn = CreateFrame("Button", nil, container, "UIPanelButtonTemplate")
-    itemHelperBtn:SetSize(90, 22)
-    itemHelperBtn:SetPoint("LEFT", addItemBtn, "RIGHT", 5, 0)
-    itemHelperBtn:SetText("Item Helper")
-    itemHelperBtn:SetScript("OnClick", function()
-        addon.ShowItemHelper(container)
-    end)
+    local itemSep = container:CreateTexture(nil, "ARTWORK")
+    itemSep:SetHeight(1)
+    itemSep:SetPoint("TOPLEFT", itemTitle, "BOTTOMLEFT", -5, -10)
+    itemSep:SetPoint("RIGHT", container, "RIGHT", -16, 0)
+    itemSep:SetColorTexture(0.4, 0.4, 0.4, 0.4)
     
-    -- ═══ TRACKED LIST ═══
-    local listSep = container:CreateTexture(nil, "ARTWORK")
-    listSep:SetHeight(1)
-    listSep:SetPoint("TOPLEFT", itemLabel, "BOTTOMLEFT", 0, -12)
-    listSep:SetPoint("RIGHT", container, "RIGHT", -16, 0)
-    listSep:SetColorTexture(0.4, 0.4, 0.4, 0.4)
+    local itemColName = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    itemColName:SetPoint("TOPLEFT", itemSep, "BOTTOMLEFT", 10, -6)
+    itemColName:SetText("|cffccccccName|r")
     
-    local colName = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    colName:SetPoint("TOPLEFT", listSep, "BOTTOMLEFT", 10, -6)
-    colName:SetText("|cffccccccName|r")
+    local itemColID = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    itemColID:SetPoint("LEFT", itemColName, "LEFT", 185, 0)
+    itemColID:SetText("|cffccccccID|r")
     
-    local colID = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    colID:SetPoint("LEFT", colName, "LEFT", 205, 0)
-    colID:SetText("|cffccccccID|r")
+    local itemColDur = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    itemColDur:SetPoint("LEFT", itemColID, "LEFT", 75, 0)
+    itemColDur:SetText("|cffccccccDuration|r")
     
-    local colDur = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    colDur:SetPoint("LEFT", colID, "LEFT", 75, 0)
-    colDur:SetText("|cffccccccDuration|r")
+    local itemColColor = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    itemColColor:SetPoint("LEFT", itemColDur, "LEFT", 60, 0)
+    itemColColor:SetText("|cffccccccColor|r")
     
-    local colSep = container:CreateTexture(nil, "ARTWORK")
-    colSep:SetHeight(1)
-    colSep:SetPoint("TOPLEFT", colName, "BOTTOMLEFT", -5, -3)
-    colSep:SetPoint("RIGHT", container, "RIGHT", -16, 0)
-    colSep:SetColorTexture(0.3, 0.3, 0.3, 0.5)
+    local itemColAction = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    itemColAction:SetPoint("RIGHT", itemSep, "RIGHT", -22, -6)
+    itemColAction:SetText("|cffccccccAction|r")
     
-    local listInset = CreateFrame("Frame", nil, container, "InsetFrameTemplate")
-    listInset:SetPoint("TOPLEFT", colSep, "BOTTOMLEFT", -5, -2)
-    listInset:SetPoint("BOTTOMRIGHT", container, "BOTTOMRIGHT", 0, 0)
+    local itemColSep = container:CreateTexture(nil, "ARTWORK")
+    itemColSep:SetHeight(1)
+    itemColSep:SetPoint("TOPLEFT", itemColName, "BOTTOMLEFT", -5, -3)
+    itemColSep:SetPoint("RIGHT", container, "RIGHT", -16, 0)
+    itemColSep:SetColorTexture(0.3, 0.3, 0.3, 0.5)
     
-    local listScroll = CreateFrame("ScrollFrame", nil, container, "UIPanelScrollFrameTemplate")
-    listScroll:SetPoint("TOPLEFT", listInset, "TOPLEFT", 5, -5)
-    listScroll:SetPoint("BOTTOMRIGHT", listInset, "BOTTOMRIGHT", -25, 5)
+    local itemInset = CreateFrame("Frame", nil, container, "InsetFrameTemplate")
+    itemInset:SetPoint("TOPLEFT", itemColSep, "BOTTOMLEFT", -5, -2)
+    itemInset:SetPoint("BOTTOMRIGHT", container, "BOTTOMRIGHT", -16, 0)
     
-    container.listContent = CreateFrame("Frame", nil, listScroll)
-    container.listContent:SetSize(500, 10)
-    listScroll:SetScrollChild(container.listContent)
+    local itemScroll = CreateFrame("ScrollFrame", nil, container, "UIPanelScrollFrameTemplate")
+    itemScroll:SetPoint("TOPLEFT", itemInset, "TOPLEFT", 5, -5)
+    itemScroll:SetPoint("BOTTOMRIGHT", itemInset, "BOTTOMRIGHT", -25, 5)
     
-    container.emptyText = listInset:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    container.emptyText:SetPoint("CENTER", 0, 0)
-    container.emptyText:SetText("|cff666666No spells or items tracked.|r")
-    container.emptyText:SetJustifyH("CENTER")
-    container.emptyText:Hide()
+    container.itemContent = CreateFrame("Frame", nil, itemScroll)
+    container.itemContent:SetSize(470, 10)
+    itemScroll:SetScrollChild(container.itemContent)
+    
+    container.itemEmpty = itemInset:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    container.itemEmpty:SetPoint("CENTER", 0, 0)
+    container.itemEmpty:SetText("|cff666666No items tracked.|r")
+    container.itemEmpty:Hide()
 end
 
 -- ═══════════════════════════════════════════
@@ -704,7 +728,8 @@ function addon.CreateOptionsFrames()
             
             -- Rebuild profile content
             ClearChildren(charProfilePanel)
-            charProfilePanel.listContent = nil
+            charProfilePanel.spellContent = nil
+            charProfilePanel.itemContent = nil
             charProfilePanel.emptyText = nil
             BuildProfileContent(charProfilePanel, addon.CharKey)
             if charProfilePanel.RefreshTrackedList then

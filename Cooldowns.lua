@@ -39,21 +39,31 @@ function addon.CheckCooldowns()
             
             local buttons = addon.FindButtonsBySpellID(spellID)
             local cdInfo = C_Spell.GetSpellCooldown(spellID)
-            local chargeInfo = C_Spell.GetSpellCharges(spellID)
+            local currentCharges = C_Spell.GetSpellCastCount(spellID) or 0
             
             local onCooldown = false
             
-            if chargeInfo and chargeInfo.maxCharges > 1 then
-                local requiredCharges = (targetCharges > 0 and targetCharges <= chargeInfo.maxCharges) and targetCharges or chargeInfo.maxCharges
-                if chargeInfo.currentCharges < requiredCharges then
-                    onCooldown = true
-                end
-            else
-                for _, btn in ipairs(buttons) do
-                    local onRegularCD = btn.cooldown and btn.cooldown:IsShown()
+            for _, btn in ipairs(buttons) do
+                local onRegularCD = btn.cooldown and btn.cooldown:IsShown()
+                local isCoolingDownRegular = onRegularCD and cdInfo and not cdInfo.isOnGCD
+                
+                if targetCharges > 0 then
+                    -- Custom charge threshold: Ignore GCD and short cooldowns entirely.
+                    -- Rely strictly on the explicit cast count API.
+                    if currentCharges < targetCharges then
+                        onCooldown = true
+                        break
+                    end
+                else
+                    -- Default (max charges check): Check regular non-GCD cooldowns,
+                    -- then conditionally check if chargeCooldown is running.
                     local onChargeCD = btn.chargeCooldown and btn.chargeCooldown:IsShown()
                     
-                    if (onRegularCD or onChargeCD) and cdInfo and not cdInfo.isOnGCD then
+                    if isCoolingDownRegular then
+                        onCooldown = true
+                        break
+                    elseif onChargeCD then
+                        -- chargeCooldown doesn't trigger for GCD, so it's safe to check standalone
                         onCooldown = true
                         break
                     end
