@@ -24,6 +24,7 @@ Lessons learned building this addon. Reference if recreating.
 - **`btn["_ProcGlow" .. key]`** — LibCustomGlow sets this on the button; use it to check if already glowing
 - **`InCombatLockdown()` guard** before `ScanActionBarItems()` — `GetActionInfo` can taint in combat
 - **`C_Timer.After`** for glow duration auto-hide — clean, cancellable
+- **`OnUpdate` frame for High-Frequency Debouncing** — Using `C_Timer.NewTimer` to debounce `SPELL_UPDATE_COOLDOWN` generates massive Lua garbage in M+ combat. A persistent `OnUpdate` frame with a boolean flag creates zero garbage allocations.
 - **`UIDropDownMenuTemplate`** — works well for color pickers with small fixed palettes
 - **WoW Settings API**: `Settings.RegisterCanvasLayoutCategory` + `Settings.RegisterAddOnCategory` for TWW
 
@@ -39,16 +40,16 @@ Lessons learned building this addon. Reference if recreating.
 ## UI Constraints
 
 - **Tab-based settings page**: General | Class Profile | Character Profile. Active profile gets green `(Active)` badge.
-- **Spell/Item rows are identical layout**: `[Label]  [ID input]  Duration: [input]  [Color ▼]  [Add]  [Helper]`
-- **Color swatches** in tracked list — click to cycle through colors inline.
-- **Helper popups** (Spell/Item) anchor to right of SettingsPanel, are draggable, click-to-fill.
-- **`/cdg` in combat**: defer to `PLAYER_REGEN_ENABLED`, don't silently fail.
+- **Spell/Item rows are rendered in split tables**: Spells list on top, Items list below, each with headers and Add buttons.
+- **Color swatches** in tracked list are static display only; default colors show the text "Default".
+- **Helper popups** (Spell/Item) anchor to right of SettingsPanel, are draggable, click-to-fill, and manage both Add and Edit states.
+- **Edit flow**: Clicking an Edit button in the tracked lists opens the corresponding Helper UI in Edit Mode, pre-filled, with a "Save" button to overwrite the entry.
 - **Tracked list**: spells white, items gold, unknown spells and off-bar items grayed with status text.
 
 ## WoW API Gotchas
 
 - **`C_SpellBook` is TWW-only** — `GetSpellBookSkillLineInfo`, `GetSpellBookItemType` with `Enum.SpellBookSpellBank.Player`
-- **`ActionBarButtonEventsFrame.frames`** — primary button source, but also scan `_G["ButtonPrefix"..i]` as fallback for addon bars. Deduplicate with a `seen` set.
+- **`ActionBarButtonEventsFrame.frames`** — primary button source, but also scan `_G["ButtonPrefix"..i]` as fallback for addon bars. Deduplicate with a `seen` set. **Always verify `type(button) == "table"`**, as poorly-written addons can pollute this array with strings or booleans, causing instant taint crashes.
 - **`C_Item.GetItemInfo`** is async — may return nil on first call. Fine for display; items resolve on next refresh.
 - **SavedVariables** (`CooldownGlowsDB`) — not available until `ADDON_LOADED`. Don't init globals before that.
 - **`wipe(table)`** instead of reassigning — preserves references held by other code.
