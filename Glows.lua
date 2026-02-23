@@ -84,3 +84,8 @@ function addon.GetEntryColor(entry)
     if type(entry) == "table" then return entry.color or "default" end
     return "default"
 end
+
+function addon.GetEntryCharges(entry)
+    if type(entry) == "table" and entry.charges then return entry.charges end
+    return 0 -- 0 means "max charges"
+end

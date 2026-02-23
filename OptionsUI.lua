@@ -122,6 +122,7 @@ local function BuildProfileContent(container, profileKey)
                     id = spellID,
                     duration = addon.GetEntryDuration(entry),
                     color = addon.GetEntryColor(entry),
+                    charges = addon.GetEntryCharges(entry),
                     name = info and info.name or ("Spell " .. spellID),
                     icon = info and info.iconID or 134400
                 })
@@ -159,15 +160,25 @@ local function BuildProfileContent(container, profileKey)
 
                 local durText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
                 durText:SetPoint("LEFT", idText, "RIGHT", 5, 0)
-                durText:SetWidth(50)
+                durText:SetWidth(40)
                 durText:SetJustifyH("CENTER")
                 durText:SetText(string.format("%s%ss|r", colorHex, spell.duration))
                 
+                local charText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                charText:SetPoint("LEFT", durText, "RIGHT", 0, 0)
+                charText:SetWidth(30)
+                charText:SetJustifyH("CENTER")
+                if spell.charges > 0 then
+                    charText:SetText(string.format("%s%sch|r", colorHex, spell.charges))
+                else
+                    charText:SetText("")
+                end
+                
                 local swatch = CreateColorSwatch(container, row, spell.color, function(newKey)
-                    profile.spells[spell.id] = { duration = spell.duration, color = newKey }
+                    profile.spells[spell.id] = { duration = spell.duration, color = newKey, charges = spell.charges }
                     RefreshTrackedList()
                 end)
-                swatch:SetPoint("LEFT", durText, "RIGHT", 8, 0)
+                swatch:SetPoint("LEFT", charText, "RIGHT", 8, 0)
 
                 if not isActuallyKnown then
                     local statusText = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -325,7 +336,24 @@ local function BuildProfileContent(container, profileKey)
     container.spellDurationInput:SetNumeric(true)
     container.spellDurationInput:SetText("3")
     
-    container.spellColorDD = CreateColorDropdown(container, container.spellDurationInput, "LEFT", 6, 0, "default")
+    local spellCharLabel = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    spellCharLabel:SetPoint("LEFT", container.spellDurationInput, "RIGHT", 10, 0)
+    spellCharLabel:SetText("Charges:")
+    
+    container.spellChargeInput = CreateFrame("EditBox", nil, container, "InputBoxTemplate")
+    container.spellChargeInput:SetSize(30, 20)
+    container.spellChargeInput:SetPoint("LEFT", spellCharLabel, "RIGHT", 6, 0)
+    container.spellChargeInput:SetAutoFocus(false)
+    container.spellChargeInput:SetNumeric(true)
+    container.spellChargeInput:SetText("0")
+    container.spellChargeInput:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Charge threshold for glow (0 = max charges)", 1, 1, 1)
+        GameTooltip:Show()
+    end)
+    container.spellChargeInput:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    
+    container.spellColorDD = CreateColorDropdown(container, container.spellChargeInput, "LEFT", 6, 0, "default")
 
     local addSpellBtn = CreateFrame("Button", nil, container, "UIPanelButtonTemplate")
     addSpellBtn:SetSize(60, 22)
@@ -334,13 +362,15 @@ local function BuildProfileContent(container, profileKey)
     addSpellBtn:SetScript("OnClick", function()
         local spellID = tonumber(container.spellInput:GetText())
         local duration = tonumber(container.spellDurationInput:GetText()) or 3
+        local charges = tonumber(container.spellChargeInput:GetText()) or 0
         local colorKey = container.spellColorDD.selectedKey or "default"
         if spellID and spellID > 0 then
             local p = CooldownGlowsDB[profileKey]
             if p then
-                p.spells[spellID] = { duration = duration, color = colorKey }
+                p.spells[spellID] = { duration = duration, charges = charges, color = colorKey }
                 container.spellInput:SetText("")
                 container.spellDurationInput:SetText("3")
+                container.spellChargeInput:SetText("0")
                 RefreshTrackedList()
                 if isCurrentPlayer then
                     addon.UpdateKnownSpells()
