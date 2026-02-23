@@ -56,8 +56,27 @@ function addon.FindButtonsBySpellID(spellID)
         else
             local result = {}
             local seen = {}
-            local slots = C_ActionBar.FindSpellActionButtons(spellID) or {}
-            for _, slot in ipairs(slots) do
+            
+            -- Track both the base spell ID and its dynamic talent override (if one exists)
+            local allSlots = {}
+            local baseSlots = C_ActionBar.FindSpellActionButtons(spellID)
+            if baseSlots then
+                for _, s in ipairs(baseSlots) do
+                    allSlots[#allSlots + 1] = s
+                end
+            end
+            
+            local overrideID = C_Spell.GetOverrideSpell(spellID)
+            if overrideID and overrideID ~= spellID then
+                local overrideSlots = C_ActionBar.FindSpellActionButtons(overrideID)
+                if overrideSlots then
+                    for _, s in ipairs(overrideSlots) do
+                        allSlots[#allSlots + 1] = s
+                    end
+                end
+            end
+            
+            for _, slot in ipairs(allSlots) do
                 for _, btn in ipairs(FindButtonsForSlot(slot)) do
                     if not seen[btn] then
                         seen[btn] = true
