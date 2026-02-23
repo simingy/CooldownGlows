@@ -99,7 +99,9 @@ function addon.ShowSpellHelper(activeProfileFrame)
         row:SetScript("OnClick", function()
             if activeProfileFrame and activeProfileFrame.spellInput then
                 activeProfileFrame.spellInput:SetText(tostring(spell.id))
-                activeProfileFrame.durationInput:SetText("3")
+                if activeProfileFrame.spellDurationInput then
+                    activeProfileFrame.spellDurationInput:SetText("3")
+                end
             end
             addon.SpellHelperFrame:Hide()
         end)

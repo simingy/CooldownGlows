@@ -1,0 +1,10 @@
+package-as: CooldownGlows
+
+externals:
+  Libs/LibStub: https://repos.wowace.com/wow/libstub/trunk
+  Libs/LibCustomGlow-1.0: https://github.com/muleyo/LibCustomGlow.git
+
+ignore:
+  - .gitignore
+  - .pkgmeta
+  - readme.md

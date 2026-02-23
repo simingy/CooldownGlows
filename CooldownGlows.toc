@@ -12,5 +12,6 @@ Glows.lua
 ActionBars.lua
 Cooldowns.lua
 SpellHelperUI.lua
+ItemHelperUI.lua
 OptionsUI.lua
 Core.lua
