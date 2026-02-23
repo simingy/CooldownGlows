@@ -35,6 +35,8 @@ function addon.CheckCooldowns()
         if addon.knownSpells[spellID] then
             local duration = addon.GetEntryDuration(entry)
             local colorKey = addon.GetEntryColor(entry)
+            local targetCharges = addon.GetEntryCharges(entry)
+            
             local buttons = addon.FindButtonsBySpellID(spellID)
             local cdInfo = C_Spell.GetSpellCooldown(spellID)
             local chargeInfo = C_Spell.GetSpellCharges(spellID)
@@ -42,13 +44,16 @@ function addon.CheckCooldowns()
             local onCooldown = false
             
             if chargeInfo and chargeInfo.maxCharges > 1 then
-                -- For spells with charges, it's "on cooldown" until ALL charges are restored
-                if chargeInfo.currentCharges < chargeInfo.maxCharges then
+                local requiredCharges = (targetCharges > 0 and targetCharges <= chargeInfo.maxCharges) and targetCharges or chargeInfo.maxCharges
+                if chargeInfo.currentCharges < requiredCharges then
                     onCooldown = true
                 end
             else
                 for _, btn in ipairs(buttons) do
-                    if btn.cooldown and btn.cooldown:IsShown() and cdInfo and not cdInfo.isOnGCD then
+                    local onRegularCD = btn.cooldown and btn.cooldown:IsShown()
+                    local onChargeCD = btn.chargeCooldown and btn.chargeCooldown:IsShown()
+                    
+                    if (onRegularCD or onChargeCD) and cdInfo and not cdInfo.isOnGCD then
                         onCooldown = true
                         break
                     end
