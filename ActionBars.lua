@@ -18,11 +18,14 @@ local function FindButtonsForSlot(slot)
     local seen = {}
     
     -- Primary source: Blizzard's ActionBarButtonEventsFrame
-    if ActionBarButtonEventsFrame and ActionBarButtonEventsFrame.frames then
+    if ActionBarButtonEventsFrame and type(ActionBarButtonEventsFrame.frames) == "table" then
         for _, button in pairs(ActionBarButtonEventsFrame.frames) do
-            if (button._state_action or button.action) == slot and not seen[button] then
-                seen[button] = true
-                result[#result + 1] = button
+            if type(button) == "table" then
+                local act = button._state_action or button.action
+                if act == slot and not seen[button] then
+                    seen[button] = true
+                    result[#result + 1] = button
+                end
             end
         end
     end
@@ -31,9 +34,12 @@ local function FindButtonsForSlot(slot)
     for _, prefix in ipairs(BUTTON_PREFIXES) do
         for i = 1, 12 do
             local button = _G[prefix .. i]
-            if button and (button._state_action or button.action) == slot and not seen[button] then
-                seen[button] = true
-                result[#result + 1] = button
+            if type(button) == "table" then
+                local act = button._state_action or button.action
+                if act == slot and not seen[button] then
+                    seen[button] = true
+                    result[#result + 1] = button
+                end
             end
         end
     end

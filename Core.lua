@@ -15,7 +15,22 @@ local defaults = {
     combatOnly = false
 }
 
-local cdTimer
+local cdUpdateFrame = CreateFrame("Frame")
+local cdTimerAccum = 0
+local cdRefreshRequested = false
+
+cdUpdateFrame:SetScript("OnUpdate", function(self, elapsed)
+    if cdRefreshRequested then
+        cdTimerAccum = cdTimerAccum + elapsed
+        if cdTimerAccum >= 0.1 then
+            cdRefreshRequested = false
+            if addon.Profile then
+                addon.CheckCooldowns()
+                addon.CheckItemCooldowns()
+            end
+        end
+    end
+end)
 local cacheUpdateFrame = CreateFrame("Frame")
 local cacheTimer = 0
 addon.spellCacheDirty = true
@@ -98,11 +113,8 @@ local function OnEvent(self, event, ...)
             end
         end
     elseif event == "SPELL_UPDATE_COOLDOWN" or event == "BAG_UPDATE_COOLDOWN" then
-        if cdTimer then cdTimer:Cancel() end
-        cdTimer = C_Timer.NewTimer(0.1, function()
-            addon.CheckCooldowns()
-            addon.CheckItemCooldowns()
-        end)
+        cdTimerAccum = 0
+        cdRefreshRequested = true
     elseif event == "SPELLS_CHANGED" or event == "PLAYER_TALENT_UPDATE" then
         addon.UpdateKnownSpells()
         addon.InvalidateCaches()
