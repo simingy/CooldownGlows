@@ -49,12 +49,16 @@ function addon.ShowItemHelper(activeProfileFrame, profileKey, isEditMode)
         h.itemPreviewIcon = h:CreateTexture(nil, "ARTWORK")
         h.itemPreviewIcon:SetSize(40, 40)
         h.itemPreviewIcon:SetPoint("TOPLEFT", h, "TOPLEFT", rightBaseX, -50)
-        h.itemPreviewIcon:Hide()
+        h.itemPreviewIcon:SetTexture(134400) -- Question mark
+        h.itemPreviewIcon:SetDesaturated(true)
+        h.itemPreviewIcon:SetAlpha(0.5)
         
         h.itemPreviewName = h:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
         h.itemPreviewName:SetPoint("LEFT", h.itemPreviewIcon, "RIGHT", 10, 0)
         h.itemPreviewName:SetWidth(180)
         h.itemPreviewName:SetJustifyH("LEFT")
+        h.itemPreviewName:SetText("No item selected")
+        h.itemPreviewName:SetTextColor(0.5, 0.5, 0.5)
         
         local function UpdateItemPreview(itemID)
             local id = tonumber(itemID)
@@ -62,13 +66,18 @@ function addon.ShowItemHelper(activeProfileFrame, profileKey, isEditMode)
                 local name, _, _, _, _, _, _, _, _, icon = C_Item.GetItemInfo(id)
                 if name then
                     h.itemPreviewIcon:SetTexture(icon or 134400)
-                    h.itemPreviewIcon:Show()
+                    h.itemPreviewIcon:SetDesaturated(false)
+                    h.itemPreviewIcon:SetAlpha(1.0)
                     h.itemPreviewName:SetText(name)
+                    h.itemPreviewName:SetTextColor(1, 0.82, 0) -- Default GameFontNormal color
                     return
                 end
             end
-            h.itemPreviewIcon:Hide()
-            h.itemPreviewName:SetText("")
+            h.itemPreviewIcon:SetTexture(134400)
+            h.itemPreviewIcon:SetDesaturated(true)
+            h.itemPreviewIcon:SetAlpha(0.5)
+            h.itemPreviewName:SetText("No item selected")
+            h.itemPreviewName:SetTextColor(0.5, 0.5, 0.5)
         end
         h.UpdateItemPreview = UpdateItemPreview
         

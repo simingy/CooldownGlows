@@ -41,12 +41,16 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
         h.spellPreviewIcon = h:CreateTexture(nil, "ARTWORK")
         h.spellPreviewIcon:SetSize(40, 40)
         h.spellPreviewIcon:SetPoint("TOPLEFT", h, "TOPLEFT", rightBaseX, -50)
-        h.spellPreviewIcon:Hide()
+        h.spellPreviewIcon:SetTexture(134400) -- Question mark
+        h.spellPreviewIcon:SetDesaturated(true)
+        h.spellPreviewIcon:SetAlpha(0.5)
         
         h.spellPreviewName = h:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
         h.spellPreviewName:SetPoint("LEFT", h.spellPreviewIcon, "RIGHT", 10, 0)
         h.spellPreviewName:SetWidth(180)
         h.spellPreviewName:SetJustifyH("LEFT")
+        h.spellPreviewName:SetText("No spell selected")
+        h.spellPreviewName:SetTextColor(0.5, 0.5, 0.5)
         
         local function UpdateSpellPreview(spellID)
             local id = tonumber(spellID)
@@ -54,13 +58,18 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
                 local info = C_Spell.GetSpellInfo(id)
                 if info and info.name then
                     h.spellPreviewIcon:SetTexture(info.iconID or 134400)
-                    h.spellPreviewIcon:Show()
+                    h.spellPreviewIcon:SetDesaturated(false)
+                    h.spellPreviewIcon:SetAlpha(1.0)
                     h.spellPreviewName:SetText(info.name)
+                    h.spellPreviewName:SetTextColor(1, 0.82, 0) -- Default GameFontNormal color
                     return
                 end
             end
-            h.spellPreviewIcon:Hide()
-            h.spellPreviewName:SetText("")
+            h.spellPreviewIcon:SetTexture(134400)
+            h.spellPreviewIcon:SetDesaturated(true)
+            h.spellPreviewIcon:SetAlpha(0.5)
+            h.spellPreviewName:SetText("No spell selected")
+            h.spellPreviewName:SetTextColor(0.5, 0.5, 0.5)
         end
         h.UpdateSpellPreview = UpdateSpellPreview
         

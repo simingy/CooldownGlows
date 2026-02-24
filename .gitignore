@@ -41,3 +41,4 @@ luac.out
 
 # CurseForge packager fetches these via .pkgmeta
 Libs/
+build/
