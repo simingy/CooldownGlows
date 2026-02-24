@@ -7,4 +7,5 @@ externals:
 ignore:
   - .gitignore
   - .pkgmeta
-  - readme.md
+  - README.md
+  - DESIGN.md

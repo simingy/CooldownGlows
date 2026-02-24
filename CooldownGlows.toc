@@ -2,7 +2,7 @@
 ## Title: CooldownGlows
 ## Notes: Flashes a proc glow on action bar buttons when spell cooldowns end.
 ## Author: Simon
-## Version: 1.0.0
+## Version: @project-version@
 ## SavedVariables: CooldownGlowsDB
 
 Libs\LibStub\LibStub.lua
