@@ -130,8 +130,9 @@ function addon.ShowItemHelper(activeProfileFrame, profileKey, isEditMode)
                 if p then
                     if not p.items then p.items = {} end
                     p.items[itemID] = { duration = duration, color = colorKey }
-                    if activeProfileFrame and activeProfileFrame.RefreshTrackedList then
-                        activeProfileFrame.RefreshTrackedList()
+                    local apf = h.activeProfileFrame
+                    if apf and apf.RefreshTrackedList then
+                        apf.RefreshTrackedList()
                     end
                     local isCurrentPlayer = (h.currentProfileKey == addon.Class or h.currentProfileKey == addon.CharKey)
                     if isCurrentPlayer then
@@ -167,7 +168,7 @@ function addon.ShowItemHelper(activeProfileFrame, profileKey, isEditMode)
     end
     
     addon.ItemHelperFrame.isEditing = isEditMode and true or false
-    
+    addon.ItemHelperFrame.activeProfileFrame = activeProfileFrame
     addon.ItemHelperFrame.currentProfileKey = profileKey
     
     if addon.SpellHelperFrame and addon.SpellHelperFrame:IsShown() then
@@ -186,7 +187,6 @@ function addon.ShowItemHelper(activeProfileFrame, profileKey, isEditMode)
     local content = addon.ItemHelperFrame.content
     for _, child in ipairs({content:GetChildren()}) do
         child:Hide()
-        child:SetParent(nil)
     end
 
     -- Scan action bars for items

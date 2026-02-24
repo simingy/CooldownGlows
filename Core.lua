@@ -17,20 +17,17 @@ local defaults = {
 
 local cdUpdateFrame = CreateFrame("Frame")
 local cdTimerAccum = 0
-local cdRefreshRequested = false
 
-cdUpdateFrame:SetScript("OnUpdate", function(self, elapsed)
-    if cdRefreshRequested then
-        cdTimerAccum = cdTimerAccum + elapsed
-        if cdTimerAccum >= 0.1 then
-            cdRefreshRequested = false
-            if addon.Profile then
-                addon.CheckCooldowns()
-                addon.CheckItemCooldowns()
-            end
+local function CdOnUpdate(self, elapsed)
+    cdTimerAccum = cdTimerAccum + elapsed
+    if cdTimerAccum >= 0.1 then
+        self:SetScript("OnUpdate", nil)
+        if addon.Profile then
+            addon.CheckCooldowns()
+            addon.CheckItemCooldowns()
         end
     end
-end)
+end
 local cacheUpdateFrame = CreateFrame("Frame")
 local cacheTimer = 0
 addon.spellCacheDirty = true
@@ -111,10 +108,12 @@ local function OnEvent(self, event, ...)
             if addon.CreateOptionsFrames then
                 addon.CreateOptionsFrames()
             end
+            
+            self:UnregisterEvent("ADDON_LOADED")
         end
-    elseif event == "SPELL_UPDATE_COOLDOWN" or event == "BAG_UPDATE_COOLDOWN" then
+    elseif event == "SPELL_UPDATE_COOLDOWN" or event == "SPELL_UPDATE_CHARGES" or event == "BAG_UPDATE_COOLDOWN" then
         cdTimerAccum = 0
-        cdRefreshRequested = true
+        cdUpdateFrame:SetScript("OnUpdate", CdOnUpdate)
     elseif event == "SPELLS_CHANGED" or event == "PLAYER_TALENT_UPDATE" then
         addon.UpdateKnownSpells()
         addon.InvalidateCaches()
@@ -128,20 +127,17 @@ local function OnEvent(self, event, ...)
             addon.CheckItemCooldowns()
         end
     elseif event == "PLAYER_REGEN_ENABLED" then
+        self:UnregisterEvent("PLAYER_REGEN_ENABLED")
         if addon.pendingOpenSettings then
             addon.pendingOpenSettings = nil
-            if Settings and Settings.OpenToCategory and addon.category then
-                Settings.OpenToCategory(addon.category:GetID())
-            else
-                InterfaceOptionsFrame_OpenToCategory("CooldownGlows")
-                InterfaceOptionsFrame_OpenToCategory("CooldownGlows")
-            end
+            Settings.OpenToCategory(addon.category:GetID())
         end
     end
 end
 
 addon.events:RegisterEvent("ADDON_LOADED")
 addon.events:RegisterEvent("SPELL_UPDATE_COOLDOWN")
+addon.events:RegisterEvent("SPELL_UPDATE_CHARGES")
 addon.events:RegisterEvent("BAG_UPDATE_COOLDOWN")
 addon.events:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
 addon.events:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -163,10 +159,5 @@ SlashCmdList["COOLDOWNGLOWS"] = function(msg)
         addon.pendingOpenSettings = true
         return
     end
-    if Settings and Settings.OpenToCategory and addon.category then
-        Settings.OpenToCategory(addon.category:GetID())
-    else
-        InterfaceOptionsFrame_OpenToCategory("CooldownGlows")
-        InterfaceOptionsFrame_OpenToCategory("CooldownGlows")
-    end
+    Settings.OpenToCategory(addon.category:GetID())
 end

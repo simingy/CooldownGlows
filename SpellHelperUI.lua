@@ -56,31 +56,11 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
                     h.spellPreviewIcon:SetTexture(info.iconID or 134400)
                     h.spellPreviewIcon:Show()
                     h.spellPreviewName:SetText(info.name)
-                    
-                    local chargeInfo = C_Spell.GetSpellCharges(id)
-                    if chargeInfo then
-                        if h.charLabel then h.charLabel:Show() end
-                        if h.chargeInput then h.chargeInput:Show() end
-                        if h.colorLabel then h.colorLabel:SetPoint("TOPLEFT", h.charLabel, "BOTTOMLEFT", 0, -20) end
-                    else
-                        if h.charLabel then h.charLabel:Hide() end
-                        if h.chargeInput then
-                            h.chargeInput:Hide()
-                            h.chargeInput:SetText("0")
-                        end
-                        if h.colorLabel then h.colorLabel:SetPoint("TOPLEFT", h.durLabel, "BOTTOMLEFT", 0, -20) end
-                    end
                     return
                 end
             end
             h.spellPreviewIcon:Hide()
             h.spellPreviewName:SetText("")
-            if h.charLabel then h.charLabel:Hide() end
-            if h.chargeInput then
-                h.chargeInput:Hide()
-                h.chargeInput:SetText("0")
-            end
-            if h.colorLabel then h.colorLabel:SetPoint("TOPLEFT", h.durLabel, "BOTTOMLEFT", 0, -20) end
         end
         h.UpdateSpellPreview = UpdateSpellPreview
         
@@ -114,25 +94,8 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
         h.durInput:SetNumeric(true)
         h.durInput:SetText("3")
         
-        h.charLabel = h:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        h.charLabel:SetPoint("TOPLEFT", h.durLabel, "BOTTOMLEFT", 0, -20)
-        h.charLabel:SetText("Charges:")
-        
-        h.chargeInput = CreateFrame("EditBox", nil, h, "InputBoxTemplate")
-        h.chargeInput:SetSize(40, 20)
-        h.chargeInput:SetPoint("RIGHT", h.charLabel, "LEFT", 210, 0)
-        h.chargeInput:SetAutoFocus(false)
-        h.chargeInput:SetNumeric(true)
-        h.chargeInput:SetText("0")
-        h.chargeInput:SetScript("OnEnter", function(self)
-            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetText("Charge threshold for glow (0 = max charges)", 1, 1, 1)
-            GameTooltip:Show()
-        end)
-        h.chargeInput:SetScript("OnLeave", function() GameTooltip:Hide() end)
-        
         h.colorLabel = h:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        h.colorLabel:SetPoint("TOPLEFT", h.charLabel, "BOTTOMLEFT", 0, -20)
+        h.colorLabel:SetPoint("TOPLEFT", h.durLabel, "BOTTOMLEFT", 0, -20)
         h.colorLabel:SetText("Color:")
         
         h.colorDD = addon.CreateColorDropdown(h, h.colorLabel, "LEFT", 80, -2, "default")
@@ -152,15 +115,15 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
         h.addBtn:SetScript("OnClick", function()
             local spellID = tonumber(h.idInput:GetText())
             local duration = tonumber(h.durInput:GetText()) or 3
-            local charges = tonumber(h.chargeInput:GetText()) or 0
             local colorKey = h.colorDD.selectedKey or "default"
             
             if spellID and spellID > 0 and h.currentProfileKey then
                 local p = CooldownGlowsDB[h.currentProfileKey]
                 if p then
-                    p.spells[spellID] = { duration = duration, charges = charges, color = colorKey }
-                    if activeProfileFrame and activeProfileFrame.RefreshTrackedList then
-                        activeProfileFrame.RefreshTrackedList()
+                    p.spells[spellID] = { duration = duration, color = colorKey }
+                    local apf = h.activeProfileFrame
+                    if apf and apf.RefreshTrackedList then
+                        apf.RefreshTrackedList()
                     end
                     local isCurrentPlayer = (h.currentProfileKey == addon.Class or h.currentProfileKey == addon.CharKey)
                     if isCurrentPlayer then
@@ -186,8 +149,6 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
                 h.idInput:SetText("")
                 h.durInput:SetText("3")
                 h.durInput:SetCursorPosition(0)
-                h.chargeInput:SetText("0")
-                h.chargeInput:SetCursorPosition(0)
                 h.addBtn:SetText("Add Spell")
                 UIDropDownMenu_SetText(h.colorDD, "Default")
                 h.colorDD.selectedKey = "default"
@@ -197,7 +158,7 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
     end
     
     addon.SpellHelperFrame.isEditing = isEditMode and true or false
-    
+    addon.SpellHelperFrame.activeProfileFrame = activeProfileFrame
     addon.SpellHelperFrame.currentProfileKey = profileKey
     
     if addon.ItemHelperFrame and addon.ItemHelperFrame:IsShown() then
@@ -274,11 +235,14 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
         end
         content:SetHeight(math.abs(yOffset))
         
-        local eventFrame = CreateFrame("Frame")
-        eventFrame:RegisterEvent("SPELLS_CHANGED")
-        eventFrame:SetScript("OnEvent", function()
-            addon.SpellHelperFrame.spellButtonsCreated = false
-        end)
+        if not addon.SpellHelperFrame.spellEventFrame then
+            local eventFrame = CreateFrame("Frame")
+            eventFrame:RegisterEvent("SPELLS_CHANGED")
+            eventFrame:SetScript("OnEvent", function()
+                addon.SpellHelperFrame.spellButtonsCreated = false
+            end)
+            addon.SpellHelperFrame.spellEventFrame = eventFrame
+        end
     end
     
     addon.SpellHelperFrame:Show()

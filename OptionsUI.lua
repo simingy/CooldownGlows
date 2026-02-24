@@ -5,7 +5,7 @@ local function ClearChildren(frame)
     local children = {frame:GetChildren()}
     for i = 1, #children do
         children[i]:Hide()
-        children[i]:SetParent(nil)
+        children[i]:SetParent(UIParent)
     end
 end
 
@@ -131,7 +131,6 @@ local function BuildProfileContent(container, profileKey)
                     id = spellID,
                     duration = addon.GetEntryDuration(entry),
                     color = addon.GetEntryColor(entry),
-                    charges = addon.GetEntryCharges(entry),
                     name = info and info.name or ("Spell " .. spellID),
                     icon = info and info.iconID or 134400
                 })
@@ -169,25 +168,12 @@ local function BuildProfileContent(container, profileKey)
 
                 local durText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
                 durText:SetPoint("LEFT", idText, "RIGHT", 5, 0)
-                durText:SetWidth(40)
+                durText:SetWidth(50)
                 durText:SetJustifyH("CENTER")
                 durText:SetText(string.format("%s%ss|r", colorHex, spell.duration))
                 
-                local charText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                charText:SetPoint("LEFT", durText, "RIGHT", 0, 0)
-                charText:SetWidth(40)
-                charText:SetJustifyH("CENTER")
-                
-                local chargeInfo = C_Spell.GetSpellCharges(spell.id)
-                if chargeInfo then
-                    local displayC = spell.charges > 0 and tostring(spell.charges) or "max"
-                    charText:SetText(string.format("%s%sch|r", colorHex, displayC))
-                else
-                    charText:SetText("")
-                end
-                
                 local swatch = CreateColorSwatch(container, row, spell.color)
-                swatch:SetPoint("LEFT", charText, "RIGHT", 8, 0)
+                swatch:SetPoint("LEFT", durText, "RIGHT", 8, 0)
 
                 if not isActuallyKnown then
                     local statusText = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -217,7 +203,6 @@ local function BuildProfileContent(container, profileKey)
                         h.isEditing = true
                         h.idInput:SetText(tostring(spell.id))
                         h.durInput:SetText(tostring(spell.duration))
-                        h.chargeInput:SetText(tostring(spell.charges or 0))
                         
                         h.colorDD.selectedKey = spell.color
                         local entry = addon.GLOW_COLOR_MAP[spell.color or "default"]
@@ -413,12 +398,8 @@ local function BuildProfileContent(container, profileKey)
     spellColDur:SetPoint("LEFT", spellColID, "LEFT", 75, 0)
     spellColDur:SetText("|cffccccccDuration|r")
     
-    local spellColCharge = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    spellColCharge:SetPoint("LEFT", spellColDur, "LEFT", 50, 0)
-    spellColCharge:SetText("|cffccccccCharges|r")
-    
     local spellColColor = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    spellColColor:SetPoint("LEFT", spellColCharge, "LEFT", 55, 0)
+    spellColColor:SetPoint("LEFT", spellColDur, "LEFT", 60, 0)
     spellColColor:SetText("|cffccccccColor|r")
     
     local spellColAction = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -519,6 +500,7 @@ end
 function addon.CreateOptionsFrames()
     local f = CreateFrame("Frame", "CooldownGlowsOptionsFrame", UIParent)
     f.name = "CooldownGlows"
+    addon.OptionsFrame = f
     
     -- Title
     local title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
@@ -749,6 +731,14 @@ function addon.CreateOptionsFrames()
         CooldownGlowsDB[addon.CharKey] = CopyTable(CooldownGlowsDB[addon.Class])
         addon.Profile = CooldownGlowsDB[addon.CharKey]
         addon.ProfileType = "char"
+        -- Wipe stale glow states from old profile
+        wipe(addon.cdStates)
+        wipe(addon.itemCdStates)
+        for btn, timer in pairs(addon.activeTimers) do
+            timer:Cancel()
+            addon.HideGlow(btn)
+        end
+        wipe(addon.activeTimers)
         RefreshCharTab()
         addon.CheckCooldowns()
         addon.CheckItemCooldowns()
@@ -758,6 +748,14 @@ function addon.CreateOptionsFrames()
         CooldownGlowsDB[addon.CharKey] = nil
         addon.Profile = CooldownGlowsDB[addon.Class]
         addon.ProfileType = "class"
+        -- Wipe stale glow states from old profile
+        wipe(addon.cdStates)
+        wipe(addon.itemCdStates)
+        for btn, timer in pairs(addon.activeTimers) do
+            timer:Cancel()
+            addon.HideGlow(btn)
+        end
+        wipe(addon.activeTimers)
         RefreshCharTab()
         addon.CheckCooldowns()
         addon.CheckItemCooldowns()
@@ -786,11 +784,7 @@ function addon.CreateOptionsFrames()
     end)
     
     -- ═══ Register ═══
-    if Settings and Settings.RegisterCanvasLayoutCategory then
-        local mainCategory = Settings.RegisterCanvasLayoutCategory(f, "CooldownGlows")
-        Settings.RegisterAddOnCategory(mainCategory)
-        addon.category = mainCategory
-    else
-        InterfaceOptions_AddCategory(f)
-    end
+    local mainCategory = Settings.RegisterCanvasLayoutCategory(f, "CooldownGlows")
+    Settings.RegisterAddOnCategory(mainCategory)
+    addon.category = mainCategory
 end

@@ -5,6 +5,7 @@ Highlights action bar buttons with a proc glow when spell/item cooldowns finish.
 ## Features
 
 - **Spell tracking** — Add spells by ID, glow when cooldown ends
+- **Charge-aware** — Spells with charges only glow when all charges are full
 - **Item tracking** — Add items by ID, glow when usable and off cooldown
 - **Glow colors** — Choose from 10 colors (Default, White, Red, Green, Blue, Yellow, Orange, Purple, Pink, Cyan)
 - **Per-class profiles** — Separate spell/item lists per class
@@ -12,19 +13,25 @@ Highlights action bar buttons with a proc glow when spell/item cooldowns finish.
 - **Duration control** — Auto-hide glow after configurable seconds
 - **Combat-only mode** — Suppress glows outside combat
 - **Spell/Item helpers** — Browse spellbook or action bar items to find IDs
+- **Combat-safe** — No taint-prone API calls; uses visual cooldown state for reliable in-combat tracking
 
 ## Usage
 
-- `/cdg` — Open settings (deferred if in combat)
+- `/cdg` or `/cooldownglows` — Open settings (deferred if in combat)
 - **General tab** — Combat-only toggle, active profile info
 - **Class tab** — Edit spell/item list for your class
 - **Character tab** — Create/delete a character-specific override
 
-Each tracked entry has an **Edit button** you can click to modify its duration, color, and properties via a Helper popup.
+Each tracked entry has an **Edit** ⚙ button to modify duration and color, and a **Remove** ✕ button to delete it.
+
+## How It Works
+
+CooldownGlows watches for cooldown state transitions. When a spell goes from on-cooldown → off-cooldown, a proc glow plays on the action bar button for a configurable duration, then fades out. For spells with charges, the glow only fires when the spell reaches maximum charges.
 
 ## Install
 
-Copy `CooldownGlows/` into your `Interface/AddOns/` folder.
+Copy `CooldownGlows/` into your `Interface/AddOns/` folder, or install via [CurseForge](https://www.curseforge.com/wow/addons/cooldownglows).
 
 **Requires:** [LibCustomGlow-1.0](https://www.curseforge.com/wow/addons/libcustomglow) (bundled in `Libs/`).
 
+**Compatibility:** WoW 12.0+ (The War Within and beyond)
