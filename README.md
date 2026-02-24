@@ -17,16 +17,19 @@ Highlights action bar buttons with a proc glow when spell/item cooldowns finish.
 
 ## Usage
 
-- `/cdg` or `/cooldownglows` — Open settings (deferred if in combat)
+Type `/cdg` or `/cooldownglows` in-game to open the settings panel (this is deferred if you are in combat).
+
 - **General tab** — Combat-only toggle, active profile info
 - **Class tab** — Edit spell/item list for your class
 - **Character tab** — Create/delete a character-specific override
 
 Each tracked entry has an **Edit** ⚙ button to modify duration and color, and a **Remove** ✕ button to delete it.
 
-## How It Works
+## Behavior
 
-CooldownGlows watches for cooldown state transitions. When a spell goes from on-cooldown → off-cooldown, a proc glow plays on the action bar button for a configurable duration, then fades out. For spells with charges, the glow only fires when the spell reaches maximum charges.
+When a tracked spell or item's cooldown finishes (goes from on-cooldown to ready), the addon detects it and triggers a glow on its action bar button for a configurable number of seconds `x` before fading out.
+
+**Important Note on Spells with Charges:** If a spell has multiple charges, it will **only** glow when it reaches maximum charges. This is a known limitation of the new Blizzard API secret/taint system, as current charge counts are no longer readable via the API while in combat.
 
 ## Install
 

@@ -100,6 +100,13 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
         
         h.colorDD = addon.CreateColorDropdown(h, h.colorLabel, "LEFT", 80, -2, "default")
         
+        h.infoText = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        h.infoText:SetPoint("TOPLEFT", h.colorLabel, "BOTTOMLEFT", 0, -50)
+        h.infoText:SetWidth(220)
+        h.infoText:SetJustifyH("LEFT")
+        h.infoText:SetText("Triggers glow when cooldown finishes.\n\n* Note: Spells with charges only glow at max charges due to Blizzard API limit.")
+        h.infoText:SetTextColor(0.7, 0.7, 0.7)
+
         h.cancelBtn = CreateFrame("Button", nil, h, "UIPanelButtonTemplate")
         h.cancelBtn:SetSize(80, 24)
         h.cancelBtn:SetPoint("BOTTOMRIGHT", h, "BOTTOMRIGHT", -15, 15)
