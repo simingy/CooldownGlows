@@ -10,3 +10,4 @@ ignore:
   - README.md
   - DESIGN.md
   - Makefile
+  - CHANGELOG.md

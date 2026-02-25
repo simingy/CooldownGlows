@@ -6,7 +6,7 @@ Highlights action bar buttons with a proc glow when spell/item cooldowns finish.
 
 - **Spell tracking** — Add spells by ID, glow when cooldown ends
 - **Charge-aware** — Spells with charges only glow when all charges are full
-- **Item tracking** — Add items by ID, glow when usable and off cooldown
+- **Item tracking** — Add items by ID, glow when off cooldown
 - **Glow colors** — Choose from 10 colors (Default, White, Red, Green, Blue, Yellow, Orange, Purple, Pink, Cyan)
 - **Per-class profiles** — Separate spell/item lists per class
 - **Per-character profiles** — Override class profile for specific characters

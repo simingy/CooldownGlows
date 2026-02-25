@@ -50,9 +50,10 @@ function addon.CancelButtonTimer(button)
     end
 end
 
--- Shared glow logic: apply glow on cooldown→ready transition
-function addon.ApplyGlowTransition(btn, shouldGlow, wasCoolingDown, duration, colorKey)
-    if shouldGlow then
+-- Shared glow logic: apply glow on transition to ready
+function addon.ApplyGlowTransition(btn, isReady, wasCoolingDown, duration, colorKey)
+    if isReady then
+        -- Trigger glow when transitioning from "on cooldown" to "ready"
         if wasCoolingDown then
             if not btn["_ProcGlow" .. addon.CDSTATES_KEY] then
                 addon.ShowGlow(btn, colorKey)
@@ -66,10 +67,13 @@ function addon.ApplyGlowTransition(btn, shouldGlow, wasCoolingDown, duration, co
             end
         end
     else
+        -- Force hide immediately if the spell goes back on cooldown (it was cast)
         addon.HideGlow(btn)
         addon.CancelButtonTimer(btn)
     end
 end
+
+
 
 -- ═══ Profile Data Helpers ═══
 -- Profile entries are {duration=N, color="key"} tables

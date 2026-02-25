@@ -40,30 +40,34 @@ function addon.CheckCooldowns()
             local cdInfo = C_Spell.GetSpellCooldown(spellID)
             
             local onCooldown = false
-            
             for _, btn in ipairs(buttons) do
                 local onRegularCD = btn.cooldown and btn.cooldown:IsShown()
                 local isCoolingDownRegular = onRegularCD and cdInfo and not cdInfo.isOnGCD
-                
-                -- Default (max charges check): Check regular non-GCD cooldowns,
-                -- then conditionally check if chargeCooldown is running.
                 local onChargeCD = btn.chargeCooldown and btn.chargeCooldown:IsShown()
                 
-                if isCoolingDownRegular then
-                    onCooldown = true
-                    break
-                elseif onChargeCD then
-                    -- chargeCooldown doesn't trigger for GCD, so it's safe to check standalone
+                if isCoolingDownRegular or onChargeCD then
                     onCooldown = true
                     break
                 end
             end
             
-            local shouldGlow = not suppressed and C_Spell.IsSpellUsable(spellID) and not onCooldown
-            for _, btn in ipairs(buttons) do
-                addon.ApplyGlowTransition(btn, shouldGlow, addon.cdStates[spellID], duration, colorKey)
+            -- wasCoolingDown tracks ACTUAL cooldown state only (not suppression)
+            local wasCoolingDown = addon.cdStates[spellID]
+            local isReady = not onCooldown
+            
+            if suppressed then
+                -- While suppressed, hide any active glows but don't touch state
+                for _, btn in ipairs(buttons) do
+                    addon.HideGlow(btn)
+                    addon.CancelButtonTimer(btn)
+                end
+            else
+                for _, btn in ipairs(buttons) do
+                    addon.ApplyGlowTransition(btn, isReady, wasCoolingDown, duration, colorKey)
+                end
             end
             
+            -- Always track the REAL cooldown state, independent of suppression
             addon.cdStates[spellID] = onCooldown
         end
     end
@@ -86,14 +90,23 @@ function addon.CheckItemCooldowns()
             end
         end
         
-        local hasItem = C_Item.GetItemCount(itemID) > 0
-        local isUsable = hasItem and C_Item.IsUsableItem(itemID)
-        local shouldGlow = not suppressed and isUsable and not onCooldown
+        local wasCoolingDown = addon.itemCdStates[itemID]
+        local isReady = not onCooldown
         
-        for _, btn in ipairs(buttons) do
-            addon.ApplyGlowTransition(btn, shouldGlow, addon.itemCdStates[itemID], duration, colorKey)
+        if suppressed then
+            for _, btn in ipairs(buttons) do
+                addon.HideGlow(btn)
+                addon.CancelButtonTimer(btn)
+            end
+        else
+            for _, btn in ipairs(buttons) do
+                addon.ApplyGlowTransition(btn, isReady, wasCoolingDown, duration, colorKey)
+            end
         end
         
         addon.itemCdStates[itemID] = onCooldown
     end
 end
+
+
+
