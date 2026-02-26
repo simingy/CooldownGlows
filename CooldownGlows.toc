@@ -5,6 +5,7 @@
 ## Version: @project-version@
 ## SavedVariables: CooldownGlowsDB
 ## X-Curse-Project-ID: 1470470
+## X-Wago-ID: QKy92YK7
 
 Libs\LibStub\LibStub.lua
 Libs\LibCustomGlow-1.0\LibCustomGlow-1.0.lua
