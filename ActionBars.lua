@@ -109,6 +109,9 @@ function addon.ScanActionBarItems()
             end
         end
     end
+    local count = 0
+    for _ in pairs(itemSlotCache) do count = count + 1 end
+    addon.Print("Scanned action bars: %d items tracked.", count)
     addon.itemCacheDirty = false
 end
 

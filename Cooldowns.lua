@@ -21,6 +21,10 @@ function addon.UpdateKnownSpells()
             end
         end
     end
+    
+    local count = 0
+    for _ in pairs(addon.knownSpells) do count = count + 1 end
+    addon.Print("Scanned spellbook: %d spells tracked.", count)
 end
 
 function addon.IsCombatOnly()
@@ -40,14 +44,12 @@ function addon.CheckCooldowns()
             local cdInfo = C_Spell.GetSpellCooldown(spellID)
             
             local onCooldown = false
-            for _, btn in ipairs(buttons) do
-                local onRegularCD = btn.cooldown and btn.cooldown:IsShown()
-                local isCoolingDownRegular = onRegularCD and cdInfo and not cdInfo.isOnGCD
-                local onChargeCD = btn.chargeCooldown and btn.chargeCooldown:IsShown()
-                
-                if isCoolingDownRegular or onChargeCD then
+            if cdInfo and cdInfo.isActive and not cdInfo.isOnGCD then
+                onCooldown = true
+            else
+                local chargeInfo = C_Spell.GetSpellCharges(spellID)
+                if chargeInfo and chargeInfo.isActive then
                     onCooldown = true
-                    break
                 end
             end
             
@@ -63,6 +65,10 @@ function addon.CheckCooldowns()
                 end
             else
                 for _, btn in ipairs(buttons) do
+                    if isReady and wasCoolingDown then
+                        local info = C_Spell.GetSpellInfo(spellID)
+                        addon.Print("Spell READY: %s (ID: %d) on %s", info and info.name or "Unknown", spellID, btn:GetName() or tostring(btn))
+                    end
                     addon.ApplyGlowTransition(btn, isReady, wasCoolingDown, duration, colorKey)
                 end
             end
@@ -78,17 +84,12 @@ function addon.CheckItemCooldowns()
     local suppressed = addon.IsCombatOnly()
     
     for itemID, entry in pairs(addon.Profile.items) do
-        local duration = addon.GetEntryDuration(entry)
+        local glowDuration = addon.GetEntryDuration(entry)
         local colorKey = addon.GetEntryColor(entry)
         local buttons = addon.FindButtonsByItemID(itemID)
         
-        local onCooldown = false
-        for _, btn in ipairs(buttons) do
-            if btn.cooldown and btn.cooldown:IsShown() then
-                onCooldown = true
-                break
-            end
-        end
+        local start, dur, enable = C_Item.GetItemCooldown(itemID)
+        local onCooldown = (start > 0 and dur > 0)
         
         local wasCoolingDown = addon.itemCdStates[itemID]
         local isReady = not onCooldown
@@ -100,13 +101,14 @@ function addon.CheckItemCooldowns()
             end
         else
             for _, btn in ipairs(buttons) do
-                addon.ApplyGlowTransition(btn, isReady, wasCoolingDown, duration, colorKey)
+                if isReady and wasCoolingDown then
+                    local name = C_Item.GetItemInfo(itemID)
+                    addon.Print("Item READY: %s (ID: %d)", name or "Unknown", itemID)
+                end
+                addon.ApplyGlowTransition(btn, isReady, wasCoolingDown, glowDuration, colorKey)
             end
         end
         
         addon.itemCdStates[itemID] = onCooldown
     end
 end
-
-
-

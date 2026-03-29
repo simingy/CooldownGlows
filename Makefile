@@ -1,25 +1,9 @@
-.PHONY: libs clean
-
-libs:
-	@echo "Fetching libraries..."
-	@mkdir -p Libs
-	@if [ ! -d "Libs/LibStub" ]; then \
-		svn checkout https://repos.wowace.com/wow/libstub/trunk Libs/LibStub; \
-	else \
-		echo "LibStub already exists, skipping."; \
-	fi
-	@if [ ! -d "Libs/LibCustomGlow-1.0" ]; then \
-		git clone https://github.com/muleyo/LibCustomGlow.git Libs/LibCustomGlow-1.0; \
-	else \
-		echo "LibCustomGlow-1.0 already exists, skipping."; \
-	fi
-	@echo "Done."
+.PHONY: build clean
 
 clean:
-	rm -rf Libs/
 	rm -rf build/
 
-build: libs
+build:
 	@echo "Building CooldownGlows..."
 	@rm -rf build
 	@mkdir -p build/CooldownGlows
@@ -31,5 +15,6 @@ build: libs
 		--exclude="/.pkgmeta" \
 		--exclude="README.md" \
 		--exclude="DESIGN.md" \
-		--exclude="Makefile"
+		--exclude="Makefile" \
+		--exclude="AGENTS.md"
 	@echo "Build complete. Addon is in build/CooldownGlows"

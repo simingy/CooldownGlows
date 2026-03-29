@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-03-29
+
+### Changed
+- **Zero-Dependency Glow System**: Removed LibCustomGlow-1.0 and LibStub. The addon now includes a self-contained proc glow system ported directly from LibCustomGlow's ProcGlow logic. This eliminates all cross-addon library conflicts and "nil value" errors.
+- **Combat Performance**: Completely reworked event handling during combat. Structural updates (spellbook rescans, action bar cache rebuilds) are now fully deferred during combat, except for stance/mount changes which get a single throttled pass every 5 seconds.
+- **WoW 12.0+ Only**: Removed all legacy 11.x/10.x fallback code. The addon now exclusively targets WoW 12.0 (Midnight) and later.
+
+### Added
+- **`/cdg test` command**: Triggers glows on all tracked buttons for immediate visual verification. Respects configured durations and colors.
+- **`/cdg cache` command**: Displays the spell/item → button mapping for debugging.
+- **Debug toggle**: Toggleable debug logging in the General settings tab.
+- **Custom glow colors**: Desaturation + VertexColor technique for accurate custom colors on Blizzard's native flipbook textures.
+
+### Fixed
+- **Taint error**: Fixed `attempt to compare field 'currentCharges' (a secret number value)` by switching to `isActive` (a NeverSecret boolean).
+- **Item duration shadowing**: Fixed a bug where item glow durations used the API cooldown duration instead of the user's configured value.
+- **Combat spam**: Eliminated excessive "Scanned spellbook" and "Caches invalidated" log spam during encounters.
+- **Settings in combat**: `/cdg` now gracefully defers opening settings until combat ends.
+
+### Removed
+- LibCustomGlow-1.0 dependency
+- LibStub dependency
+- `Libs/` directory and `make libs` build step
+- Legacy `CDglowDB` migration code
+
 ## [1.2.1] - 2026-02-24
 
 ### Fixed
@@ -20,7 +45,6 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - **Spell/Item Helper UI**: New searchable interface to easily add tracked entries from your spellbook or action bars.
-- **Improved Tooling**: Added `Makefile` for automated build and library fetching.
 - **Extended Documentation**: Comprehensive `README.md` and `DESIGN.md` documentation.
 
 ### Fixed

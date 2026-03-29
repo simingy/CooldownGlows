@@ -635,10 +635,20 @@ function addon.CreateOptionsFrames()
         end
     end)
     
+    local debugCheckbox = CreateFrame("CheckButton", nil, generalContainer, "UICheckButtonTemplate")
+    debugCheckbox:SetPoint("TOPLEFT", combatOnlyCheckbox, "BOTTOMLEFT", 0, -4)
+    debugCheckbox.text:SetText("Enable debug logs")
+    debugCheckbox.text:SetFontObject("GameFontHighlightSmall")
+    debugCheckbox:SetScript("OnClick", function(self)
+        if addon.Profile then
+            addon.Profile.debug = self:GetChecked()
+        end
+    end)
+    
     -- Active profile info
     local profileInfoSep = generalContainer:CreateTexture(nil, "ARTWORK")
     profileInfoSep:SetHeight(1)
-    profileInfoSep:SetPoint("TOPLEFT", combatOnlyCheckbox, "BOTTOMLEFT", 2, -14)
+    profileInfoSep:SetPoint("TOPLEFT", debugCheckbox, "BOTTOMLEFT", 2, -14)
     profileInfoSep:SetPoint("RIGHT", generalContainer, "RIGHT", 0, 0)
     profileInfoSep:SetColorTexture(0.4, 0.4, 0.4, 0.4)
     
@@ -766,6 +776,7 @@ function addon.CreateOptionsFrames()
         if addon.Profile then
             if addon.Profile.combatOnly == nil then addon.Profile.combatOnly = false end
             combatOnlyCheckbox:SetChecked(addon.Profile.combatOnly)
+            debugCheckbox:SetChecked(addon.Profile.debug or false)
         end
         
         UpdateProfileInfo()
