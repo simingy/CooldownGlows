@@ -12,8 +12,9 @@ Highlights action bar buttons with a proc glow when spell/item cooldowns finish.
 - **Per-character profiles** — Override class profile for specific characters
 - **Duration control** — Auto-hide glow after configurable seconds
 - **Combat-only mode** — Suppress glows outside combat
-- **Spell/Item helpers** — Browse spellbook or action bar items to find IDs
-- **Combat-safe** — No taint-prone API calls; uses visual cooldown state for reliable in-combat tracking
+- **Manual Assignment** — Precisely map abilities strictly to your expected UI layout targets.
+- **Precision Tracking** — Operates natively on a `.1s` active background evaluation hook for maximum accuracy bypassing broken throttled Events.
+- **Combat-safe** — No taint-prone API calls; uses visual cooldown state and static assignment mappings for unbreakable in-combat stability.
 - **Zero dependencies** — Self-contained proc glow system, no external libraries required
 - **Debug tools** — `/cdg cache` and `/cdg test` for troubleshooting
 

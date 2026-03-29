@@ -4,7 +4,7 @@ Lessons learned building this addon. Reference if recreating.
 
 ## Core Architecture
 
-**Event-driven, cache-first.** Cooldown events (`SPELL_UPDATE_COOLDOWN`, `SPELL_UPDATE_CHARGES`, `BAG_UPDATE_COOLDOWN`) trigger a 50ms debounced check via `OnUpdate`. The `OnUpdate` handler self-disables (`SetScript("OnUpdate", nil)`) when not active to avoid per-frame waste. Cache rebuilds happen on bar-change events (`ACTIONBAR_SLOT_CHANGED`, etc.) with a 0.5s debounce.
+**Polling-driven precision.** Relies entirely on a constant 10 Hz (0.1s interval) background evaluation loop inside `Core.lua`. The reactionary `SPELL_UPDATE_COOLDOWN` event paradigm inherently falls victim to throttling lag queues (2-3 second delays); evaluating natively guarantees perfect timing mappings without missing edge frames.
 
 **Data format.** Profile entries are `{duration=N, color="key"}` tables.
 
@@ -18,8 +18,8 @@ Lessons learned building this addon. Reference if recreating.
 
 ## What Works
 
-- **`C_ActionBar.FindSpellActionButtons(spellID)`** — reliable for mapping spells to action slots
-- **`GetActionInfo(slot)` with `actionType == "item"`** — reliable for direct item slots
+- **Explicit Assignment Hooks** — Eliminates native action bar UI scanning completely; users statically build mapping caches associating spell IDs with absolute Frame strings (`MultiBarBottomRightButton10`). This entirely eliminates `C_ActionBar.GetActionDisplayCount` dependencies and native UI latency.
+- **Dynamic Spec Check Bypass** — Evaluates active specialization status and omits background processing for currently inactive array bindings cleanly.
 - **`C_Spell.GetSpellCooldown(spellID).isOnGCD`** — `NeverSecret = true`, safe to read in combat
 - **`C_Spell.GetSpellCooldown(spellID).isActive`** — `NeverSecret = true`, safe boolean for CD state
 - **`C_Spell.GetSpellCharges(spellID).isActive`** — `NeverSecret = true`, safe boolean for charge state
@@ -67,7 +67,7 @@ Lessons learned building this addon. Reference if recreating.
 - **`C_SpellBook`** — `GetSpellBookSkillLineInfo`, `GetSpellBookItemType` with `Enum.SpellBookSpellBank.Player`
 - **`SpellCooldownInfo.isOnGCD`** — `NeverSecret = true`. Safe to read even when the rest of the struct is secret.
 - **`SpellCooldownInfo.isActive`** — `NeverSecret = true`. Boolean indicating whether a cooldown is active.
-- **`ActionBarButtonEventsFrame.frames`** — primary button source. Always verify `type(button) == "table"`.
+- **Explicit UI Overrides** — `ActionBarButtonEventsFrame` scanning logic has been aggressively deprecated from Core engine checks due to performance leaks.
 - **`C_Item.GetItemInfo`** is async — may return nil on first call. Items resolve on next refresh.
 - **SavedVariables** (`CooldownGlowsDB`) — not available until `ADDON_LOADED`. Unregister after processing.
 - **`wipe(table)`** instead of reassigning — preserves references held by other code.
@@ -78,7 +78,7 @@ Lessons learned building this addon. Reference if recreating.
 |------|------|---------------|
 | `Core.lua` | Events, profile init, slash cmds | Loaded last (depends on all others). Unregisters ADDON_LOADED after init. |
 | `Glows.lua` | Color palette, self-contained proc glow, `ApplyGlowTransition` | Loaded first. Zero dependencies. |
-| `ActionBars.lua` | Spell/item → button cache | No combat scanning (`InCombatLockdown` guard) |
+| `ActionBars.lua` | (DEPRECATED) Legacy auto-discovery cache framework. Functionality migrated natively to Options Profile registrations. |
 | `Cooldowns.lua` | CD state tracking, charge detection, glow triggers | State-transition only. Uses `isActive` boolean, not secret numbers. |
 | `OptionsUI.lua` | Tab UI, color dropdowns, profile editing | Stores `addon.OptionsFrame` for helper hooks |
 | `SpellHelperUI.lua` | Spellbook browser | Filters passives, sorts alpha. |

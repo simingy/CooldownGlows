@@ -1,34 +1,29 @@
 local addonName, addon = ...
 
-addon.knownSpells = {}
 addon.cdStates = {}
 addon.itemCdStates = {}
+addon.trackableSpellsCache = {}
 
-function addon.UpdateKnownSpells()
-    if not addon.Profile then return end
-    wipe(addon.knownSpells)
-    
-    local tabs = C_SpellBook.GetNumSpellBookSkillLines()
-    for i = 1, tabs do
-        local skillLineInfo = C_SpellBook.GetSpellBookSkillLineInfo(i)
-        if skillLineInfo then
-            local offset, numSlots = skillLineInfo.itemIndexOffset, skillLineInfo.numSpellBookItems
-            for j = offset + 1, offset + numSlots do
-                local spellType, spellID = C_SpellBook.GetSpellBookItemType(j, Enum.SpellBookSpellBank.Player)
-                if (spellType == Enum.SpellBookItemType.Spell or spellType == Enum.SpellBookItemType.FutureSpell) and spellID then
-                    addon.knownSpells[spellID] = true
-                end
-            end
-        end
+function addon.UpdateTrackableSpells()
+    if not addon.Profile or not addon.Profile.spells then return end
+    wipe(addon.trackableSpellsCache)
+    for spellID in pairs(addon.Profile.spells) do
+        addon.trackableSpellsCache[spellID] = addon.IsSpellTrackable(spellID)
     end
-    
-    local count = 0
-    for _ in pairs(addon.knownSpells) do count = count + 1 end
-    addon.Print("Scanned spellbook: %d spells tracked.", count)
 end
+
 
 function addon.IsCombatOnly()
     return addon.Profile and addon.Profile.combatOnly and not UnitAffectingCombat("player")
+end
+
+function addon.IsSpellTrackable(spellID)
+    if not spellID then return false end
+    if IsPlayerSpell and IsPlayerSpell(spellID) then return true end
+    if IsSpellKnown and IsSpellKnown(spellID) then return true end
+    if IsSpellKnown and IsSpellKnown(spellID, true) then return true end
+    if IsSpellKnownOrOverridesKnown and IsSpellKnownOrOverridesKnown(spellID) then return true end
+    return false
 end
 
 function addon.CheckCooldowns()
@@ -36,11 +31,18 @@ function addon.CheckCooldowns()
     local suppressed = addon.IsCombatOnly()
     
     for spellID, entry in pairs(addon.Profile.spells) do
-        if addon.knownSpells[spellID] then
+        local btn = entry.button and _G[entry.button] or nil
+        
+        if not addon.trackableSpellsCache[spellID] then
+            if btn then
+                addon.HideGlow(btn)
+                addon.CancelButtonTimer(btn)
+            end
+            addon.cdStates[spellID] = nil
+        else
             local duration = addon.GetEntryDuration(entry)
             local colorKey = addon.GetEntryColor(entry)
             
-            local buttons = addon.FindButtonsBySpellID(spellID)
             local cdInfo = C_Spell.GetSpellCooldown(spellID)
             
             local onCooldown = false
@@ -53,18 +55,14 @@ function addon.CheckCooldowns()
                 end
             end
             
-            -- wasCoolingDown tracks ACTUAL cooldown state only (not suppression)
             local wasCoolingDown = addon.cdStates[spellID]
             local isReady = not onCooldown
             
-            if suppressed then
-                -- While suppressed, hide any active glows but don't touch state
-                for _, btn in ipairs(buttons) do
+            if not addon.isTesting and btn then
+                if suppressed then
                     addon.HideGlow(btn)
                     addon.CancelButtonTimer(btn)
-                end
-            else
-                for _, btn in ipairs(buttons) do
+                else
                     if isReady and wasCoolingDown then
                         local info = C_Spell.GetSpellInfo(spellID)
                         addon.Print("Spell READY: %s (ID: %d) on %s", info and info.name or "Unknown", spellID, btn:GetName() or tostring(btn))
@@ -86,21 +84,19 @@ function addon.CheckItemCooldowns()
     for itemID, entry in pairs(addon.Profile.items) do
         local glowDuration = addon.GetEntryDuration(entry)
         local colorKey = addon.GetEntryColor(entry)
-        local buttons = addon.FindButtonsByItemID(itemID)
+        local btn = entry.button and _G[entry.button] or nil
         
         local start, dur, enable = C_Item.GetItemCooldown(itemID)
-        local onCooldown = (start > 0 and dur > 0)
+        local onCooldown = (start and start > 0 and dur and dur > 1.5)
         
         local wasCoolingDown = addon.itemCdStates[itemID]
         local isReady = not onCooldown
         
-        if suppressed then
-            for _, btn in ipairs(buttons) do
+        if not addon.isTesting and btn then
+            if suppressed then
                 addon.HideGlow(btn)
                 addon.CancelButtonTimer(btn)
-            end
-        else
-            for _, btn in ipairs(buttons) do
+            else
                 if isReady and wasCoolingDown then
                     local name = C_Item.GetItemInfo(itemID)
                     addon.Print("Item READY: %s (ID: %d)", name or "Unknown", itemID)

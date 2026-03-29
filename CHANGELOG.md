@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0] - 2026-03-29
+
+### Changed
+- **Architecture Overhaul**: Transitioned from a reactionary `SPELL_UPDATE_COOLDOWN` event-driven model to a continuous `0.1s` precision background polling loop. This completely eliminates 2-3 second API throttling delays that previously prevented glows from appearing instantly when an ability returned from cooldown.
+- **Static Action Configurations**: The addon no longer attempts to dynamically scan the user's action bars to guess button locations. Users must now explicitly define which `Action Button` a tracked spell or item should anchor its glow to during registration via the UI.
+- **Dynamic Spec Evaluation**: Replaced giant spellbook scanning caches with immediate, real-time `IsSpellTrackable` evaluations. Cooldown loops intelligently skip tracking abilities the player is currently not assigned/specced into, driving CPU overhead down to near zero.
+
+### Fixed
+- Fixed visual layout clipping in the Options UI where the unlearned text would squish underneath action buttons.
+- Fixed UI formatting logic expanding the horizontal tracking grid layout from `470px` to `540px` seamlessly.
+- Fixed an edge case where `/cdg test` glows would be instantly cleared by the new `0.1s` active background suppression sweeps.
+
 ## [1.3.0] - 2026-03-29
 
 ### Changed

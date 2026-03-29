@@ -19,11 +19,10 @@ These guidelines ensure consistency, performance, and compatibility for the Cool
 - **Data-Driven API**: Prefer `C_Spell` and `C_Item` APIs over UI frame inspection for cooldown detection.
 
 ## 4. Performance & Combat Safety
-- **Event Strategy**: During `InCombatLockdown()`:
-  - `SPELLS_CHANGED` and `ACTIONBAR_SLOT_CHANGED` → **fully deferred** (dirty flag only).
-  - `UPDATE_BONUS_ACTIONBAR` (stance/mount) → allowed with a **5-second throttle**.
-  - `PLAYER_REGEN_ENABLED` → flushes all pending updates.
-- **Cooldown Debouncing**: CD checks run at most once per 50ms via `OnUpdate` self-disabling pattern.
+- **Event Strategy**: Due to heavy internal throttling of standard Blizzard events like `SPELL_UPDATE_COOLDOWN` producing multi-second lag queues:
+  - We exclusively rely on an active background `0.1s` (10Hz) polling loop tied to the `OnUpdate` handler.
+  - Native Event bindings are purely restricted to explicit UI refresh hooks (`SPELLS_CHANGED`, `PLAYER_ENTERING_WORLD`) forcing cache rebuilds outside of combat.
+- **Cooldown Polling**: CD checks natively utilize explicit Button frame strings assigned mathematically in the SV tables rather than trying to perform `C_ActionBar` loop lookups, making `10Hz` polling virtually frictionless logic sweeps.
 - **Debug Logging**: All debug prints gated behind `addon.Profile.debug` and `addon.Print` helper. Never spam during combat.
 
 ## 5. UI & Aesthetics

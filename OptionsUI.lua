@@ -131,6 +131,7 @@ local function BuildProfileContent(container, profileKey)
                     id = spellID,
                     duration = addon.GetEntryDuration(entry),
                     color = addon.GetEntryColor(entry),
+                    button = entry.button,
                     name = info and info.name or ("Spell " .. spellID),
                     icon = info and info.iconID or 134400
                 })
@@ -138,13 +139,11 @@ local function BuildProfileContent(container, profileKey)
             table.sort(sortedSpells, function(a, b) return a.name < b.name end)
             
             for _, spell in ipairs(sortedSpells) do
-                local isActuallyKnown = true
-                if isCurrentPlayer then
-                    isActuallyKnown = (addon.knownSpells[spell.id] == true)
-                end
+                local isActuallyKnown = addon.IsSpellTrackable(spell.id)
+                if not isCurrentPlayer then isActuallyKnown = true end
 
                 local row = CreateFrame("Frame", nil, container.spellContent)
-                row:SetSize(470, 26)
+                row:SetSize(540, 26)
                 row:SetPoint("TOPLEFT", 0, spellYOffset)
                 
                 local highlight = row:CreateTexture(nil, "HIGHLIGHT")
@@ -156,30 +155,34 @@ local function BuildProfileContent(container, profileKey)
                 
                 local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
                 nameText:SetPoint("LEFT", 8, 0)
-                nameText:SetWidth(180)
+                nameText:SetWidth(170)
                 nameText:SetJustifyH("LEFT")
                 nameText:SetText(string.format("|T%s:14:14:0:0|t  %s%s|r", spell.icon, colorHex, spell.name))
 
                 local idText = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
                 idText:SetPoint("LEFT", nameText, "RIGHT", 5, 0)
-                idText:SetWidth(70)
+                idText:SetWidth(55)
                 idText:SetJustifyH("CENTER")
                 idText:SetText(string.format("%s%s|r", colorHex, tostring(spell.id)))
+                
+                local btnText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                btnText:SetPoint("LEFT", idText, "RIGHT", 5, 0)
+                btnText:SetWidth(145)
+                btnText:SetJustifyH("CENTER")
+                local targetDisplay = spell.button and spell.button or "Missing"
+                local targetColor = spell.button and colorHex or "|cffff3333"
+                btnText:SetText(string.format("%s%s|r", targetColor, targetDisplay))
 
                 local durText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                durText:SetPoint("LEFT", idText, "RIGHT", 5, 0)
-                durText:SetWidth(50)
+                durText:SetPoint("LEFT", btnText, "RIGHT", 5, 0)
+                durText:SetWidth(35)
                 durText:SetJustifyH("CENTER")
                 durText:SetText(string.format("%s%ss|r", colorHex, spell.duration))
                 
                 local swatch = CreateColorSwatch(container, row, spell.color)
                 swatch:SetPoint("LEFT", durText, "RIGHT", 8, 0)
 
-                if not isActuallyKnown then
-                    local statusText = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-                    statusText:SetPoint("LEFT", swatch, "RIGHT", 5, 0)
-                    statusText:SetText("|cff666666(not learned)|r")
-                end
+
                 
                 local removeBtn = CreateFrame("Button", nil, row)
                 removeBtn:SetPoint("RIGHT", -5, 0)
@@ -203,6 +206,8 @@ local function BuildProfileContent(container, profileKey)
                         h.isEditing = true
                         h.idInput:SetText(tostring(spell.id))
                         h.durInput:SetText(tostring(spell.duration))
+                        h.btnFrameDD.selectedValue = spell.button
+                        UIDropDownMenu_SetText(h.btnFrameDD, spell.button or "")
                         
                         h.colorDD.selectedKey = spell.color
                         local entry = addon.GLOW_COLOR_MAP[spell.color or "default"]
@@ -230,6 +235,7 @@ local function BuildProfileContent(container, profileKey)
                     profile.spells[spell.id] = nil
                     RefreshTrackedList()
                     if isCurrentPlayer then
+                        if addon.UpdateTrackableSpells then addon.UpdateTrackableSpells() end
                         addon.CheckCooldowns()
                     end
                 end)
@@ -252,6 +258,7 @@ local function BuildProfileContent(container, profileKey)
                     id = itemID,
                     duration = addon.GetEntryDuration(entry),
                     color = addon.GetEntryColor(entry),
+                    button = entry.button,
                     name = name or ("Item " .. itemID),
                     icon = icon or 134400
                 })
@@ -259,47 +266,40 @@ local function BuildProfileContent(container, profileKey)
             table.sort(sortedItems, function(a, b) return a.name < b.name end)
             
             for _, item in ipairs(sortedItems) do
-                local isOnBar = true
-                if addon.IsItemOnActionBar then
-                    isOnBar = addon.IsItemOnActionBar(item.id)
-                end
-                
                 local row = CreateFrame("Frame", nil, container.itemContent)
-                row:SetSize(470, 26)
+                row:SetSize(540, 24)
                 row:SetPoint("TOPLEFT", 0, itemYOffset)
                 
-                local highlight = row:CreateTexture(nil, "HIGHLIGHT")
-                highlight:SetAllPoints()
-                highlight:SetColorTexture(1, 1, 0.6, 0.05)
-                
-                local colorHex = isOnBar and "|cffccaa00" or "|cff666666"
+                local colorHex = "|cffccaa00"
                 
                 local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
                 nameText:SetPoint("LEFT", 8, 0)
-                nameText:SetWidth(180)
+                nameText:SetWidth(170)
                 nameText:SetJustifyH("LEFT")
                 nameText:SetText(string.format("|T%s:14:14:0:0|t  %s%s|r", item.icon, colorHex, item.name))
 
                 local idText = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
                 idText:SetPoint("LEFT", nameText, "RIGHT", 5, 0)
-                idText:SetWidth(70)
+                idText:SetWidth(55)
                 idText:SetJustifyH("CENTER")
                 idText:SetText(string.format("%s%s|r", colorHex, tostring(item.id)))
+                
+                local btnText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                btnText:SetPoint("LEFT", idText, "RIGHT", 5, 0)
+                btnText:SetWidth(145)
+                btnText:SetJustifyH("CENTER")
+                local targetDisplay = item.button and item.button or "Missing"
+                local targetColor = item.button and colorHex or "|cffff3333"
+                btnText:SetText(string.format("%s%s|r", targetColor, targetDisplay))
 
                 local durText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                durText:SetPoint("LEFT", idText, "RIGHT", 5, 0)
-                durText:SetWidth(50)
+                durText:SetPoint("LEFT", btnText, "RIGHT", 5, 0)
+                durText:SetWidth(35)
                 durText:SetJustifyH("CENTER")
                 durText:SetText(string.format("%s%ss|r", colorHex, item.duration))
                 
                 local swatch = CreateColorSwatch(container, row, item.color)
                 swatch:SetPoint("LEFT", durText, "RIGHT", 8, 0)
-
-                if not isOnBar then
-                    local statusText = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-                    statusText:SetPoint("LEFT", swatch, "RIGHT", 5, 0)
-                    statusText:SetText("|cff666666(not on bar)|r")
-                end
                 
                 local removeBtn = CreateFrame("Button", nil, row)
                 removeBtn:SetPoint("RIGHT", -5, 0)
@@ -323,6 +323,8 @@ local function BuildProfileContent(container, profileKey)
                         h.isEditing = true
                         h.idInput:SetText(tostring(item.id))
                         h.durInput:SetText(tostring(item.duration))
+                        h.btnFrameDD.selectedValue = item.button
+                        UIDropDownMenu_SetText(h.btnFrameDD, item.button or "")
                         
                         h.colorDD.selectedKey = item.color
                         local entry = addon.GLOW_COLOR_MAP[item.color or "default"]
@@ -391,15 +393,19 @@ local function BuildProfileContent(container, profileKey)
     spellColName:SetText("|cffccccccName|r")
     
     local spellColID = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    spellColID:SetPoint("LEFT", spellColName, "LEFT", 185, 0)
+    spellColID:SetPoint("LEFT", spellColName, "LEFT", 175, 0)
     spellColID:SetText("|cffccccccID|r")
     
+    local spellColBtn = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    spellColBtn:SetPoint("LEFT", spellColID, "LEFT", 60, 0)
+    spellColBtn:SetText("|cffccccccTarget|r")
+    
     local spellColDur = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    spellColDur:SetPoint("LEFT", spellColID, "LEFT", 75, 0)
-    spellColDur:SetText("|cffccccccDuration|r")
+    spellColDur:SetPoint("LEFT", spellColBtn, "LEFT", 150, 0)
+    spellColDur:SetText("|cffccccccDur.|r")
     
     local spellColColor = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    spellColColor:SetPoint("LEFT", spellColDur, "LEFT", 60, 0)
+    spellColColor:SetPoint("LEFT", spellColDur, "LEFT", 40, 0)
     spellColColor:SetText("|cffccccccColor|r")
     
     local spellColAction = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -422,7 +428,7 @@ local function BuildProfileContent(container, profileKey)
     spellScroll:SetPoint("BOTTOMRIGHT", spellInset, "BOTTOMRIGHT", -25, 5)
     
     container.spellContent = CreateFrame("Frame", nil, spellScroll)
-    container.spellContent:SetSize(470, 10)
+    container.spellContent:SetSize(540, 10)
     spellScroll:SetScrollChild(container.spellContent)
     
     container.spellEmpty = spellInset:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -454,15 +460,19 @@ local function BuildProfileContent(container, profileKey)
     itemColName:SetText("|cffccccccName|r")
     
     local itemColID = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    itemColID:SetPoint("LEFT", itemColName, "LEFT", 185, 0)
+    itemColID:SetPoint("LEFT", itemColName, "LEFT", 175, 0)
     itemColID:SetText("|cffccccccID|r")
     
+    local itemColBtn = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    itemColBtn:SetPoint("LEFT", itemColID, "LEFT", 60, 0)
+    itemColBtn:SetText("|cffccccccTarget|r")
+    
     local itemColDur = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    itemColDur:SetPoint("LEFT", itemColID, "LEFT", 75, 0)
-    itemColDur:SetText("|cffccccccDuration|r")
+    itemColDur:SetPoint("LEFT", itemColBtn, "LEFT", 150, 0)
+    itemColDur:SetText("|cffccccccDur.|r")
     
     local itemColColor = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    itemColColor:SetPoint("LEFT", itemColDur, "LEFT", 60, 0)
+    itemColColor:SetPoint("LEFT", itemColDur, "LEFT", 40, 0)
     itemColColor:SetText("|cffccccccColor|r")
     
     local itemColAction = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -484,7 +494,7 @@ local function BuildProfileContent(container, profileKey)
     itemScroll:SetPoint("BOTTOMRIGHT", itemInset, "BOTTOMRIGHT", -25, 5)
     
     container.itemContent = CreateFrame("Frame", nil, itemScroll)
-    container.itemContent:SetSize(470, 10)
+    container.itemContent:SetSize(540, 10)
     itemScroll:SetScrollChild(container.itemContent)
     
     container.itemEmpty = itemInset:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -784,7 +794,7 @@ function addon.CreateOptionsFrames()
         
         -- Refresh class tab
         if classContainer.RefreshTrackedList then
-            addon.UpdateKnownSpells()
+            if addon.UpdateTrackableSpells then addon.UpdateTrackableSpells() end
             classContainer.RefreshTrackedList()
         end
         

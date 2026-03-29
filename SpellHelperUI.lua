@@ -3,7 +3,7 @@ local addonName, addon = ...
 function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
     if not addon.SpellHelperFrame then
         local h = CreateFrame("Frame", "CooldownGlowsSpellHelper", UIParent, "BasicFrameTemplateWithInset")
-        h:SetSize(600, 500)
+        h:SetSize(680, 530)
         h:SetMovable(true)
         h:EnableMouse(true)
         h:RegisterForDrag("LeftButton")
@@ -79,7 +79,7 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
         
         h.idInput = CreateFrame("EditBox", nil, h, "InputBoxTemplate")
         h.idInput:SetSize(100, 20)
-        h.idInput:SetPoint("RIGHT", h.idLabel, "LEFT", 210, 0)
+        h.idInput:SetPoint("RIGHT", h.idLabel, "LEFT", 265, 0)
         h.idInput:SetAutoFocus(false)
         h.idInput:SetNumeric(true)
         h.idInput:SetScript("OnEnterPressed", function(self)
@@ -98,7 +98,7 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
         
         h.durInput = CreateFrame("EditBox", nil, h, "InputBoxTemplate")
         h.durInput:SetSize(40, 20)
-        h.durInput:SetPoint("RIGHT", h.durLabel, "LEFT", 210, 0)
+        h.durInput:SetPoint("RIGHT", h.durLabel, "LEFT", 265, 0)
         h.durInput:SetAutoFocus(false)
         h.durInput:SetNumeric(true)
         h.durInput:SetText("3")
@@ -108,46 +108,160 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
         h.colorLabel:SetText("Color:")
         
         h.colorDD = addon.CreateColorDropdown(h, h.colorLabel, "LEFT", 80, -2, "default")
+        h.colorDD:ClearAllPoints()
+        h.colorDD:SetPoint("RIGHT", h.colorLabel, "LEFT", 280, -3)
         
-        h.infoText = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        h.infoText:SetPoint("TOPLEFT", h.colorLabel, "BOTTOMLEFT", 0, -50)
+        h.btnFrameLabel = h:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        h.btnFrameLabel:SetPoint("TOPLEFT", h.colorLabel, "BOTTOMLEFT", 0, -20)
+        h.btnFrameLabel:SetText("Target Frame:")
+
+        h.btnFrameDD = CreateFrame("Frame", "CooldownGlowsSpellTargetDD", h, "UIDropDownMenuTemplate")
+        h.btnFrameDD:SetPoint("RIGHT", h.btnFrameLabel, "LEFT", 280, -3)
+        UIDropDownMenu_SetWidth(h.btnFrameDD, 130)
+        
+        UIDropDownMenu_Initialize(h.btnFrameDD, function(self, level, menuList)
+            level = level or 1
+            if level == 1 then
+                local id = tonumber(h.idInput:GetText())
+                local found = id and addon.FindButtonsBySpellID(id) or {}
+                
+                local info = UIDropDownMenu_CreateInfo()
+                info.text = "-- Currently Found on Bars --"
+                info.isTitle = true
+                info.notCheckable = true
+                UIDropDownMenu_AddButton(info, level)
+                
+                local hasFound = false
+                for _, btn in ipairs(found) do
+                    local name = btn:GetName()
+                    if name then
+                        hasFound = true
+                        local bInfo = UIDropDownMenu_CreateInfo()
+                        bInfo.text = name
+                        bInfo.value = name
+                        bInfo.func = function()
+                            UIDropDownMenu_SetText(h.btnFrameDD, name)
+                            h.btnFrameDD.selectedValue = name
+                            CloseDropDownMenus()
+                        end
+                        UIDropDownMenu_AddButton(bInfo, level)
+                    end
+                end
+                
+                if not hasFound then
+                    local noneInfo = UIDropDownMenu_CreateInfo()
+                    noneInfo.text = "None found for this Spell ID"
+                    noneInfo.disabled = true
+                    noneInfo.notCheckable = true
+                    UIDropDownMenu_AddButton(noneInfo, level)
+                end
+                
+                local div = UIDropDownMenu_CreateInfo()
+                div.text = " "
+                div.isTitle = true
+                div.notCheckable = true
+                UIDropDownMenu_AddButton(div, level)
+                
+                local stdHeader = UIDropDownMenu_CreateInfo()
+                stdHeader.text = "-- Standard Action Bars --"
+                stdHeader.isTitle = true
+                stdHeader.notCheckable = true
+                UIDropDownMenu_AddButton(stdHeader, level)
+                
+                local stdBars = {
+                    {"Action Bar 1", "ActionButton"},
+                    {"Bottom Left Bar", "MultiBarBottomLeftButton"},
+                    {"Bottom Right Bar", "MultiBarBottomRightButton"},
+                    {"Right Bar", "MultiBarRightButton"},
+                    {"Left Bar", "MultiBarLeftButton"},
+                    {"Action Bar 5", "MultiBar5Button"},
+                    {"Action Bar 6", "MultiBar6Button"},
+                    {"Action Bar 7", "MultiBar7Button"},
+                    {"Action Bar 8", "MultiBar8Button"}
+                }
+                for _, bar in ipairs(stdBars) do
+                    local stdInfo = UIDropDownMenu_CreateInfo()
+                    stdInfo.text = bar[1]
+                    stdInfo.hasArrow = true
+                    stdInfo.menuList = bar[2]
+                    stdInfo.notCheckable = true
+                    UIDropDownMenu_AddButton(stdInfo, level)
+                end
+            elseif level == 2 then
+                for i = 1, 12 do
+                    local name = menuList .. i
+                    local btnInfo = UIDropDownMenu_CreateInfo()
+                    btnInfo.text = name
+                    btnInfo.value = name
+                    btnInfo.func = function()
+                        UIDropDownMenu_SetText(h.btnFrameDD, name)
+                        h.btnFrameDD.selectedValue = name
+                        CloseDropDownMenus()
+                    end
+                    UIDropDownMenu_AddButton(btnInfo, level)
+                end
+            end
+        end)
+        UIDropDownMenu_SetText(h.btnFrameDD, "")
+
+        h.infoText = h:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        h.infoText:SetPoint("TOPLEFT", h.btnFrameLabel, "BOTTOMLEFT", 0, -30)
         h.infoText:SetWidth(220)
         h.infoText:SetJustifyH("LEFT")
-        h.infoText:SetText("Triggers glow when cooldown finishes.\n\n* Note: Spells with charges only glow at max charges due to Blizzard API limit.")
+        h.infoText:SetText("Triggers glow when cooldown finishes.\n\n* Required: Provide the Exact UI Button Frame name (e.g. ActionButton1) by selecting.")
         h.infoText:SetTextColor(0.7, 0.7, 0.7)
 
         h.cancelBtn = CreateFrame("Button", nil, h, "UIPanelButtonTemplate")
-        h.cancelBtn:SetSize(80, 24)
+        h.cancelBtn:SetSize(70, 24)
         h.cancelBtn:SetPoint("BOTTOMRIGHT", h, "BOTTOMRIGHT", -15, 15)
         h.cancelBtn:SetText("Cancel")
-        h.cancelBtn:SetScript("OnClick", function()
-            h:Hide()
-        end)
+        h.cancelBtn:SetScript("OnClick", function() h:Hide() end)
 
         h.addBtn = CreateFrame("Button", nil, h, "UIPanelButtonTemplate")
-        h.addBtn:SetSize(80, 24)
-        h.addBtn:SetPoint("RIGHT", h.cancelBtn, "LEFT", -10, 0)
-        h.addBtn:SetText("Add Spell")
+        h.addBtn:SetSize(90, 26)
+        h.addBtn:SetPoint("RIGHT", h.cancelBtn, "LEFT", -5, 0)
+        h.addBtn:SetText("Save Spell")
         h.addBtn:SetScript("OnClick", function()
             local spellID = tonumber(h.idInput:GetText())
             local duration = tonumber(h.durInput:GetText()) or 3
             local colorKey = h.colorDD.selectedKey or "default"
+            local targetBtnName = h.btnFrameDD.selectedValue or (h.btnFrameDD.Text and h.btnFrameDD.Text:GetText()) or ""
+            
+            if targetBtnName == "" then
+                addon.Print("Error: You must assign a Target Frame.")
+                return
+            end
             
             if spellID and spellID > 0 and h.currentProfileKey then
                 local p = CooldownGlowsDB[h.currentProfileKey]
                 if p then
-                    p.spells[spellID] = { duration = duration, color = colorKey }
+                    if not p.spells then p.spells = {} end
+                    p.spells[spellID] = { duration = duration, color = colorKey, button = targetBtnName }
                     local apf = h.activeProfileFrame
-                    if apf and apf.RefreshTrackedList then
-                        apf.RefreshTrackedList()
-                    end
+                    if apf and apf.RefreshTrackedList then apf.RefreshTrackedList() end
                     local isCurrentPlayer = (h.currentProfileKey == addon.Class or h.currentProfileKey == addon.CharKey)
                     if isCurrentPlayer then
-                        addon.UpdateKnownSpells()
+                        if addon.UpdateTrackableSpells then addon.UpdateTrackableSpells() end
                         addon.CheckCooldowns()
                     end
                     h:Hide()
                 end
+            end
+        end)
+        
+        h.testBtn = CreateFrame("Button", nil, h, "UIPanelButtonTemplate")
+        h.testBtn:SetSize(70, 24)
+        h.testBtn:SetPoint("RIGHT", h.addBtn, "LEFT", -5, 0)
+        h.testBtn:SetText("Test")
+        h.testBtn:SetScript("OnClick", function()
+            local targetBtnName = h.btnFrameDD.selectedValue or (h.btnFrameDD.Text and h.btnFrameDD.Text:GetText()) or ""
+            local btn = targetBtnName ~= "" and _G[targetBtnName] or nil
+            if btn then
+                local duration = tonumber(h.durInput:GetText()) or 3
+                local colorKey = h.colorDD.selectedKey or "default"
+                addon.ApplyGlowTransition(btn, true, true, duration, colorKey)
+            else
+                addon.Print("Error: Cannot test, frame not found.")
             end
         end)
 
@@ -165,7 +279,9 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
                 h.idInput:SetText("")
                 h.durInput:SetText("3")
                 h.durInput:SetCursorPosition(0)
-                h.addBtn:SetText("Add Spell")
+                h.btnFrameDD.selectedValue = nil
+                UIDropDownMenu_SetText(h.btnFrameDD, "")
+                h.addBtn:SetText("Save")
                 UIDropDownMenu_SetText(h.colorDD, "Default")
                 h.colorDD.selectedKey = "default"
                 h.UpdateSpellPreview("")
