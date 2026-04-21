@@ -111,7 +111,7 @@ local function InitProcGlow(f)
 
     local flipbookStart = f.ProcStartAnim:CreateAnimation("FlipBook")
     flipbookStart:SetChildKey("ProcStart")
-    flipbookStart:SetDuration(0.7)
+    flipbookStart:SetDuration(0.3)
     flipbookStart:SetOrder(1)
     flipbookStart:SetFlipBookRows(6)
     flipbookStart:SetFlipBookColumns(5)
@@ -189,13 +189,13 @@ function addon.ShowGlow(button, colorKey)
     end
 
     f:SetParent(button)
-    f:SetFrameLevel(button:GetFrameLevel() + frameLevel)
+    f:SetFrameStrata("TOOLTIP")
+    f:SetFrameLevel(button:GetFrameLevel() + 50)
 
     local width, height = button:GetSize()
-    local xOff = width * 0.2
-    local yOff = height * 0.2
-    f:SetPoint("TOPLEFT", button, "TOPLEFT", -xOff, yOff)
-    f:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", xOff, -yOff)
+    f:ClearAllPoints()
+    f:SetSize(width * 1.4, height * 1.4)
+    f:SetPoint("CENTER", button, "CENTER", 0, 0)
 
     SetupProcGlow(f, color)
     f:Show()
@@ -220,14 +220,16 @@ end
 function addon.ApplyGlowTransition(btn, isReady, wasCoolingDown, duration, colorKey)
     if isReady then
         if wasCoolingDown then
-            addon.ShowGlow(btn, colorKey)
-            addon.CancelButtonTimer(btn)
+            if not btn["_CDGProcGlow"] or not btn["_CDGProcGlow"]:IsVisible() then
+                addon.ShowGlow(btn, colorKey)
+                addon.CancelButtonTimer(btn)
 
-            if duration and duration > 0 then
-                addon.activeTimers[btn] = C_Timer.NewTimer(duration, function()
-                    addon.HideGlow(btn)
-                    addon.activeTimers[btn] = nil
-                end)
+                if duration and duration > 0 then
+                    addon.activeTimers[btn] = C_Timer.NewTimer(duration, function()
+                        addon.HideGlow(btn)
+                        addon.activeTimers[btn] = nil
+                    end)
+                end
             end
         end
     else

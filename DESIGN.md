@@ -64,10 +64,10 @@ Lessons learned building this addon. Reference if recreating.
 
 ## WoW 12 API Notes
 
-- **`C_SpellBook`** — `GetSpellBookSkillLineInfo`, `GetSpellBookItemType` with `Enum.SpellBookSpellBank.Player`
-- **`SpellCooldownInfo.isOnGCD`** — `NeverSecret = true`. Safe to read even when the rest of the struct is secret.
-- **`SpellCooldownInfo.isActive`** — `NeverSecret = true`. Boolean indicating whether a cooldown is active.
-- **Explicit UI Overrides** — `ActionBarButtonEventsFrame` scanning logic has been aggressively deprecated from Core engine checks due to performance leaks.
+- **`C_SpellBook`** — Modern replacement for legacy `GetSpellInfo` and `IsSpellKnown` checks.
+- **`C_Spell.GetSpellCooldown(spellID)`** — Returns a table (12.0.5+). Ensure robust nil handling.
+- **`TOOLTIP` Stratum Enforcement** — Necessary in 12.0.5 to prevent glows from being clipped or hidden by the refactored action bar HUD overlays.
+- **Animation De-bouncing** — High-precision loops (0.1s) must verify `frame:IsVisible()` before re-triggering `ShowGlow` to prevent "invisible" animation restarts.
 - **`C_Item.GetItemInfo`** is async — may return nil on first call. Items resolve on next refresh.
 - **SavedVariables** (`CooldownGlowsDB`) — not available until `ADDON_LOADED`. Unregister after processing.
 - **`wipe(table)`** instead of reassigning — preserves references held by other code.

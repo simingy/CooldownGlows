@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0] - 2026-04-21
+
+### Added
+- **Charge Caching Optimization**: Implemented a performance-critical cache that identifies non-charge spells (like interrupts) during spellbook scans. This allows the addon to skip redundant `C_Spell.GetSpellCharges` API calls during the high-precision polling loop, significantly reducing CPU overhead.
+- **State-Locking Logic**: Added a detection layer to prevents "invisible" or flickering glows caused by rapid state oscillation. The addon now ensures a glow animation completes its burst cycle before any logic-driven restarts are allowed.
+
+### Changed
+- **WoW 12.0.5 Compatibility**: Refactored core cooldown tracking to handle the new return structure of `C_Spell.GetSpellCooldown(spellID)`, which now returns a table instead of individual values.
+- **Precision GCD Protection**: Implemented a manual GCD detection mechanism by comparing current cooldown durations against the dummy GCD spell (ID 61304), accurately replacing the deprecated `isOnGCD` field in the `C_Spell` namespace.
+- **Ultra-High Visibility**: Elevated glow frames to the `TOOLTIP` strata and `+50` internal frame level. This ensures glows remain visible over the top of the refactored 12.0.5 action bar HUD textures.
+- **Namespace Migration**: Ported all `IsSpellTrackable` functions to the modern `C_SpellBook` namespace to align with Blizzard's 12.0 API deprecations.
+
 ## [2.0.0] - 2026-03-29
 
 ### Changed

@@ -8,7 +8,10 @@ function addon.UpdateTrackableSpells()
     if not addon.Profile or not addon.Profile.spells then return end
     wipe(addon.trackableSpellsCache)
     for spellID in pairs(addon.Profile.spells) do
-        addon.trackableSpellsCache[spellID] = addon.IsSpellTrackable(spellID)
+        local trackable = addon.IsSpellTrackable(spellID)
+        local chargeInfo = C_Spell.GetSpellCharges(spellID)
+        local hasCharges = (chargeInfo ~= nil and chargeInfo.maxCharges > 1)
+        addon.trackableSpellsCache[spellID] = { trackable = trackable, hasCharges = hasCharges }
     end
 end
 
@@ -19,10 +22,14 @@ end
 
 function addon.IsSpellTrackable(spellID)
     if not spellID then return false end
+    -- Broad check for 12.0.5
+    if C_SpellBook.IsSpellKnown and C_SpellBook.IsSpellKnown(spellID) then return true end
+    if C_Spell.IsSpellDisplayable and C_Spell.IsSpellDisplayable(spellID) then return true end
+    
+    -- Fallbacks
     if IsPlayerSpell and IsPlayerSpell(spellID) then return true end
     if IsSpellKnown and IsSpellKnown(spellID) then return true end
-    if IsSpellKnown and IsSpellKnown(spellID, true) then return true end
-    if IsSpellKnownOrOverridesKnown and IsSpellKnownOrOverridesKnown(spellID) then return true end
+    if GetSpellInfo(spellID) then return true end -- Ultimate fallback
     return false
 end
 
@@ -33,7 +40,8 @@ function addon.CheckCooldowns()
     for spellID, entry in pairs(addon.Profile.spells) do
         local btn = entry.button and _G[entry.button] or nil
         
-        if not addon.trackableSpellsCache[spellID] then
+        local cache = addon.trackableSpellsCache[spellID]
+        if not cache or not cache.trackable then
             if btn then
                 addon.HideGlow(btn)
                 addon.CancelButtonTimer(btn)
@@ -44,13 +52,19 @@ function addon.CheckCooldowns()
             local colorKey = addon.GetEntryColor(entry)
             
             local cdInfo = C_Spell.GetSpellCooldown(spellID)
+            local gcdInfo = C_Spell.GetSpellCooldown(61304) or { startTime = 0, duration = 0, isActive = false }
             
             local onCooldown = false
-            if cdInfo and cdInfo.isActive and not cdInfo.isOnGCD then
-                onCooldown = true
-            else
+            if cdInfo and cdInfo.isActive then
+                -- Compare with GCD. Interrupts like Mind Freeze should usually have duration 0 for GCD
+                local isOnGCD = gcdInfo.isActive and (cdInfo.startTime > 0) and (cdInfo.startTime == gcdInfo.startTime) and (cdInfo.duration == gcdInfo.duration)
+                if not isOnGCD then
+                    onCooldown = true
+                end
+            elseif cache.hasCharges then
+                -- ONLY check charges if we know the spell actually has them
                 local chargeInfo = C_Spell.GetSpellCharges(spellID)
-                if chargeInfo and chargeInfo.isActive then
+                if chargeInfo and chargeInfo.isActive and chargeInfo.maxCharges > 0 then
                     onCooldown = true
                 end
             end
@@ -63,10 +77,6 @@ function addon.CheckCooldowns()
                     addon.HideGlow(btn)
                     addon.CancelButtonTimer(btn)
                 else
-                    if isReady and wasCoolingDown then
-                        local info = C_Spell.GetSpellInfo(spellID)
-                        addon.Print("Spell READY: %s (ID: %d) on %s", info and info.name or "Unknown", spellID, btn:GetName() or tostring(btn))
-                    end
                     addon.ApplyGlowTransition(btn, isReady, wasCoolingDown, duration, colorKey)
                 end
             end

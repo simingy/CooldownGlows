@@ -18,7 +18,7 @@ local cdUpdateFrame = CreateFrame("Frame")
 local cdTimerAccum = 0
 local function CdOnUpdate(self, elapsed)
     cdTimerAccum = cdTimerAccum + elapsed
-    if cdTimerAccum >= 0.1 then
+    if cdTimerAccum >= 0.05 then
         cdTimerAccum = 0
         if addon.Profile then
             addon.CheckCooldowns()

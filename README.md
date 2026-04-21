@@ -46,4 +46,4 @@ Copy `CooldownGlows/` into your `Interface/AddOns/` folder, or install via [Curs
 
 **No external dependencies required.** The addon includes its own self-contained glow system.
 
-**Compatibility:** WoW 12.0+ (Midnight)
+**Compatibility:** WoW 12.0.5 (Midnight) and later.
