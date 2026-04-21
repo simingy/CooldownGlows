@@ -8,10 +8,7 @@ function addon.UpdateTrackableSpells()
     if not addon.Profile or not addon.Profile.spells then return end
     wipe(addon.trackableSpellsCache)
     for spellID in pairs(addon.Profile.spells) do
-        local trackable = addon.IsSpellTrackable(spellID)
-        local chargeInfo = C_Spell.GetSpellCharges(spellID)
-        local hasCharges = (chargeInfo ~= nil and chargeInfo.maxCharges > 1)
-        addon.trackableSpellsCache[spellID] = { trackable = trackable, hasCharges = hasCharges }
+        addon.trackableSpellsCache[spellID] = addon.IsSpellTrackable(spellID)
     end
 end
 
@@ -37,11 +34,14 @@ function addon.CheckCooldowns()
     if not addon.Profile or not addon.Profile.spells then return end
     local suppressed = addon.IsCombatOnly()
     
+    -- Cache GCD state once per cycle to reduce API overhead
+    local gcdInfo = C_Spell.GetSpellCooldown(61304)
+
     for spellID, entry in pairs(addon.Profile.spells) do
         local btn = entry.button and _G[entry.button] or nil
         
-        local cache = addon.trackableSpellsCache[spellID]
-        if not cache or not cache.trackable then
+        local isTrackable = addon.trackableSpellsCache[spellID]
+        if not isTrackable then
             if btn then
                 addon.HideGlow(btn)
                 addon.CancelButtonTimer(btn)
@@ -52,19 +52,29 @@ function addon.CheckCooldowns()
             local colorKey = addon.GetEntryColor(entry)
             
             local cdInfo = C_Spell.GetSpellCooldown(spellID)
-            local gcdInfo = C_Spell.GetSpellCooldown(61304) or { startTime = 0, duration = 0, isActive = false }
             
             local onCooldown = false
             if cdInfo and cdInfo.isActive then
-                -- Compare with GCD. Interrupts like Mind Freeze should usually have duration 0 for GCD
-                local isOnGCD = gcdInfo.isActive and (cdInfo.startTime > 0) and (cdInfo.startTime == gcdInfo.startTime) and (cdInfo.duration == gcdInfo.duration)
+                -- In 12.0.5+, cdInfo.isOnGCD is the reliable way to identify GCD without comparing secret values.
+                -- We fallback to manual comparison only if isOnGCD is missing, wrapping it in pcall to avoid crashes.
+                local isOnGCD = cdInfo.isOnGCD
+                if isOnGCD == nil and gcdInfo and gcdInfo.isActive then
+                    local success, result = pcall(function()
+                        return (cdInfo.startTime > 0) and (cdInfo.startTime == gcdInfo.startTime) and (cdInfo.duration == gcdInfo.duration)
+                    end)
+                    isOnGCD = success and result
+                end
+
                 if not isOnGCD then
                     onCooldown = true
                 end
-            elseif cache.hasCharges then
-                -- ONLY check charges if we know the spell actually has them
+            end
+
+            -- Max Charges Only: Even if not on a primary cooldown (or just on GCD), 
+            -- check if any charges are still recharging.
+            if not onCooldown then
                 local chargeInfo = C_Spell.GetSpellCharges(spellID)
-                if chargeInfo and chargeInfo.isActive and chargeInfo.maxCharges > 0 then
+                if chargeInfo and chargeInfo.isActive and chargeInfo.maxCharges > 1 then
                     onCooldown = true
                 end
             end
@@ -97,7 +107,14 @@ function addon.CheckItemCooldowns()
         local btn = entry.button and _G[entry.button] or nil
         
         local start, dur, enable = C_Item.GetItemCooldown(itemID)
-        local onCooldown = (start and start > 0 and dur and dur > 1.5)
+        
+        -- Use pcall for magnitude comparisons as items may also return secret numbers in tainted contexts
+        local onCooldown = false
+        if start and start ~= 0 and dur then
+            local success, result = pcall(function() return dur > 1.5 end)
+            -- If secret or failed, assume on cooldown for safety
+            onCooldown = (not success) or result
+        end
         
         local wasCoolingDown = addon.itemCdStates[itemID]
         local isReady = not onCooldown

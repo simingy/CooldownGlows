@@ -20,9 +20,9 @@ Lessons learned building this addon. Reference if recreating.
 
 - **Explicit Assignment Hooks** — Eliminates native action bar UI scanning completely; users statically build mapping caches associating spell IDs with absolute Frame strings (`MultiBarBottomRightButton10`). This entirely eliminates `C_ActionBar.GetActionDisplayCount` dependencies and native UI latency.
 - **Dynamic Spec Check Bypass** — Evaluates active specialization status and omits background processing for currently inactive array bindings cleanly.
-- **`C_Spell.GetSpellCooldown(spellID).isOnGCD`** — `NeverSecret = true`, safe to read in combat
-- **`C_Spell.GetSpellCooldown(spellID).isActive`** — `NeverSecret = true`, safe boolean for CD state
-- **`C_Spell.GetSpellCharges(spellID).isActive`** — `NeverSecret = true`, safe boolean for charge state
+- **`C_Spell.GetSpellCooldown(spellID).isOnGCD`** — `NeverSecret = true` (12.0.5+). The modern standard for identifying GCD states without touching restricted timing values.
+- **`C_Spell.GetSpellCooldown(spellID).isActive`** — `NeverSecret = true`, safe boolean for CD state.
+- **`C_Spell.GetSpellCharges(spellID).isActive`** — `NeverSecret = true`, safe boolean for charge state.
 - **`C_Item.GetItemCooldown(itemID)`** — returns start, duration, enable
 - **Self-contained ProcGlow** with `SetDesaturated(1)` + `SetVertexColor()` — accurate custom colors, no library conflicts
 - **`CreateFramePool("Frame", UIParent, nil, resetter)`** — efficient glow frame pooling
@@ -36,7 +36,7 @@ Lessons learned building this addon. Reference if recreating.
 - **`C_Spell.GetSpellCastCount(spellID)`** — `SecretWhenSpellCooldownRestricted = true`. Returns a secret number in combat; any math or comparison causes a Lua error.
 - **`C_Spell.GetSpellCharges(spellID).currentCharges`** — Secret number in combat. Cannot read charge counts.
 - **`C_ActionBar.GetActionDisplayCount(slot)`** — `SecretWhenActionCooldownRestricted = true`. Secret in combat.
-- **`pcall` around secret values** — Does NOT help. The error occurs when the value is *used*, not when the API is called.
+- **`pcall` for crash prevention** — While `pcall` cannot bypass the "secret" restriction to read the underlying value, it **must** be used to wrap magnitude comparisons (e.g., `start > 0`) in tainted environments to prevent Lua crashes when these restricted values are returned.
 - **`btn.Count:GetText()` for charge scraping** — Unreliable timing, race conditions with UI updates.
 - **`GetMacroItem(macroIndex)`** — unreliable for conditional macros, returns nil.
 - **LibCustomGlow as shared library** — Version conflicts and initialization bugs (`lib` variable shadowing) cause `ProcGlow_Start` to be nil when multiple addons share the library. Solved by inlining the glow logic.

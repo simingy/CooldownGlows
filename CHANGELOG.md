@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.1] - 2026-04-21
+
+### Fixed
+- **Secret Number Crash**: Fixed a Lua error when comparing cooldown timing values in tainted execution environments (introduced by 12.0.5 manual GCD detection). Re-implemented `isOnGCD` check using the safe boolean field provided by `C_Spell.GetSpellCooldown`.
+- **Max Charges Logic**: Fixed a bug where multi-charge spells would incorrectly glow during the GCD even if they only had 1/2 charges available. The "Glow at Max Charges Only" behavior is now strictly enforced even during Global Cooldown transitions.
+- **Item Safety**: Wrapped item cooldown magnitude comparisons in `pcall` to ensure stability if item cooldowns also become restricted in future 12.x patches.
+
 ## [2.1.0] - 2026-04-21
 
 ### Added
