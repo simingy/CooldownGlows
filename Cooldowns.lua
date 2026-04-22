@@ -22,7 +22,6 @@ function addon.IsSpellTrackable(spellID)
     
     -- WoW 12.0+ Primary Checks
     if C_SpellBook.IsSpellKnown(spellID) then return true end
-    if C_Spell.IsSpellDisplayable(spellID) then return true end
     
     -- Validity check for spells not in spellbook (e.g. items, toys, or seasonal spells)
     local info = C_Spell.GetSpellInfo(spellID)

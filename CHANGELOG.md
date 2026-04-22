@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.3] - 2026-04-22
+
+### Fixed
+- **API Fix**: Resolved a "nil value" crash in `IsSpellTrackable` caused by the removal of the `C_Spell.IsSpellDisplayable` function in WoW 12.0.5.
+
 ## [2.1.2] - 2026-04-21
 
 ### Fixed
