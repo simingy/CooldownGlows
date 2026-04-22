@@ -34,11 +34,6 @@ local function OnEvent(self, event, ...)
         if name == addonName then
             CooldownGlowsDB = CooldownGlowsDB or {}
             
-            -- Simple migration from old CDglowDB if present
-            if CDglowDB and not next(CooldownGlowsDB) then
-                CooldownGlowsDB = CopyTable(CDglowDB)
-            end
-            
             addon.Class = select(2, UnitClass("player"))
             addon.CharKey = "char:" .. UnitName("player") .. "-" .. GetRealmName()
             

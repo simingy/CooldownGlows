@@ -23,7 +23,8 @@ Lessons learned building this addon. Reference if recreating.
 - **`C_Spell.GetSpellCooldown(spellID).isOnGCD`** — `NeverSecret = true` (12.0.5+). The modern standard for identifying GCD states without touching restricted timing values.
 - **`C_Spell.GetSpellCooldown(spellID).isActive`** — `NeverSecret = true`, safe boolean for CD state.
 - **`C_Spell.GetSpellCharges(spellID).isActive`** — `NeverSecret = true`, safe boolean for charge state.
-- **`C_Item.GetItemCooldown(itemID)`** — returns start, duration, enable
+- **`C_Item.GetItemCooldown(itemID)`** — returns start, duration, enable. Magnitude comparisons MUST be wrapped in `pcall` for 12.x combat safety.
+- **`C_SpellBook`** — The exclusive namespace for spell validity and knowledge checks. Legacy `IsSpellKnown` is removed.
 - **Self-contained ProcGlow** with `SetDesaturated(1)` + `SetVertexColor()` — accurate custom colors, no library conflicts
 - **`CreateFramePool("Frame", UIParent, nil, resetter)`** — efficient glow frame pooling
 - **`InCombatLockdown()` guard** before `ScanActionBarItems()` — `GetActionInfo` can taint in combat
@@ -65,11 +66,11 @@ Lessons learned building this addon. Reference if recreating.
 ## WoW 12 API Notes
 
 - **`C_SpellBook`** — Modern replacement for legacy `GetSpellInfo` and `IsSpellKnown` checks.
-- **`C_Spell.GetSpellCooldown(spellID)`** — Returns a table (12.0.5+). Ensure robust nil handling.
+- **`C_Spell.GetSpellCooldown(spellID)`** — Returns a table (12.0.5+). Ensure robust nil handling. Requires WoW 12.0.5 minimum.
 - **`TOOLTIP` Stratum Enforcement** — Necessary in 12.0.5 to prevent glows from being clipped or hidden by the refactored action bar HUD overlays.
-- **Animation De-bouncing** — High-precision loops (0.1s) must verify `frame:IsVisible()` before re-triggering `ShowGlow` to prevent "invisible" animation restarts.
+- **Animation De-bouncing** — High-precision loops (0.05s) must verify `frame:IsVisible()` before re-triggering `ShowGlow` to prevent "invisible" animation restarts.
 - **`C_Item.GetItemInfo`** is async — may return nil on first call. Items resolve on next refresh.
-- **SavedVariables** (`CooldownGlowsDB`) — not available until `ADDON_LOADED`. Unregister after processing.
+- **SavedVariables** (`CooldownGlowsDB`) — not available until `ADDON_LOADED`. Legacy `CDglowDB` migrations are no longer supported in v2.1.2+.
 - **`wipe(table)`** instead of reassigning — preserves references held by other code.
 
 ## File Responsibilities

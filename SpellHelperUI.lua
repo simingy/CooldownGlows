@@ -327,7 +327,7 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
                     local spellType, spellID = C_SpellBook.GetSpellBookItemType(j, Enum.SpellBookSpellBank.Player)
                     if (spellType == Enum.SpellBookItemType.Spell or spellType == Enum.SpellBookItemType.FutureSpell) and spellID then
                         local info = C_Spell.GetSpellInfo(spellID)
-                        local isKnown = IsSpellKnown(spellID) or IsSpellKnownOrOverridesKnown(spellID)
+                        local isKnown = C_SpellBook.IsSpellKnown(spellID)
                         if info and info.name and not info.isPassive and isKnown then
                             table.insert(spellList, {
                                 id = spellID,

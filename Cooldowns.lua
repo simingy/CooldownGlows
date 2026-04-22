@@ -19,24 +19,21 @@ end
 
 function addon.IsSpellTrackable(spellID)
     if not spellID then return false end
-    -- Broad check for 12.0.5
-    if C_SpellBook.IsSpellKnown and C_SpellBook.IsSpellKnown(spellID) then return true end
-    if C_Spell.IsSpellDisplayable and C_Spell.IsSpellDisplayable(spellID) then return true end
     
-    -- Fallbacks
-    if IsPlayerSpell and IsPlayerSpell(spellID) then return true end
-    if IsSpellKnown and IsSpellKnown(spellID) then return true end
-    if GetSpellInfo(spellID) then return true end -- Ultimate fallback
-    return false
+    -- WoW 12.0+ Primary Checks
+    if C_SpellBook.IsSpellKnown(spellID) then return true end
+    if C_Spell.IsSpellDisplayable(spellID) then return true end
+    
+    -- Validity check for spells not in spellbook (e.g. items, toys, or seasonal spells)
+    local info = C_Spell.GetSpellInfo(spellID)
+    return (info and info.name ~= nil)
 end
 
 function addon.CheckCooldowns()
     if not addon.Profile or not addon.Profile.spells then return end
     local suppressed = addon.IsCombatOnly()
     
-    -- Cache GCD state once per cycle to reduce API overhead
-    local gcdInfo = C_Spell.GetSpellCooldown(61304)
-
+    -- Precise polling check for spells
     for spellID, entry in pairs(addon.Profile.spells) do
         local btn = entry.button and _G[entry.button] or nil
         
@@ -54,20 +51,8 @@ function addon.CheckCooldowns()
             local cdInfo = C_Spell.GetSpellCooldown(spellID)
             
             local onCooldown = false
-            if cdInfo and cdInfo.isActive then
-                -- In 12.0.5+, cdInfo.isOnGCD is the reliable way to identify GCD without comparing secret values.
-                -- We fallback to manual comparison only if isOnGCD is missing, wrapping it in pcall to avoid crashes.
-                local isOnGCD = cdInfo.isOnGCD
-                if isOnGCD == nil and gcdInfo and gcdInfo.isActive then
-                    local success, result = pcall(function()
-                        return (cdInfo.startTime > 0) and (cdInfo.startTime == gcdInfo.startTime) and (cdInfo.duration == gcdInfo.duration)
-                    end)
-                    isOnGCD = success and result
-                end
-
-                if not isOnGCD then
-                    onCooldown = true
-                end
+            if cdInfo and cdInfo.isActive and not cdInfo.isOnGCD then
+                onCooldown = true
             end
 
             -- Max Charges Only: Even if not on a primary cooldown (or just on GCD), 
@@ -108,10 +93,10 @@ function addon.CheckItemCooldowns()
         
         local start, dur, enable = C_Item.GetItemCooldown(itemID)
         
-        -- Use pcall for magnitude comparisons as items may also return secret numbers in tainted contexts
+        -- Use pcall for magnitude comparisons as items return secret numbers in tainted contexts
         local onCooldown = false
-        if start and start ~= 0 and dur then
-            local success, result = pcall(function() return dur > 1.5 end)
+        if start and dur then
+            local success, result = pcall(function() return start > 0 and dur > 1.5 end)
             -- If secret or failed, assume on cooldown for safety
             onCooldown = (not success) or result
         end

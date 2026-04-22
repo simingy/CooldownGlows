@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.2] - 2026-04-21
+
+### Fixed
+- **Legacy API Removal**: Fixed a Lua error where the addon attempted to call the deprecated `GetSpellInfo` function during zone transitions (e.g., hearting). All legacy spell/item APIs have been removed in favor of modern `C_Spell`, `C_Item`, and `C_SpellBook` namespaces.
+- **Improved Item Stability**: Hardened the item cooldown logic by wrapping all magnitude comparisons (`start > 0`) in `pcall`, preventing Lua crashes when item timings become restricted "Secret Numbers" in combat.
+- **Code Purge**: Removed all dead fallback code for WoW versions older than 12.0.5, significantly reducing CPU overhead and memory footprint.
+
 ## [2.1.1] - 2026-04-21
 
 ### Fixed
