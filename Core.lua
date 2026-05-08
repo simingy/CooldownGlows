@@ -102,21 +102,28 @@ SlashCmdList["COOLDOWNGLOWS"] = function(msg)
         addon.isTesting = true
         local maxDur = 0
         
-        local function triggerGlows(list)
+        local function triggerGlows(list, isSpell)
             if not list then return end
             for id, entry in pairs(list) do
-                local btn = entry.button and _G[entry.button]
-                if btn then
-                    local colorKey = addon.GetEntryColor(entry)
-                    local duration = addon.GetEntryDuration(entry)
-                    if duration > maxDur then maxDur = duration end
-                    addon.ApplyGlowTransition(btn, true, true, duration, colorKey)
+                local shouldTest = true
+                if isSpell then
+                    shouldTest = addon.IsSpellTrackable(id)
+                end
+                
+                if shouldTest then
+                    local btn = entry.button and _G[entry.button]
+                    if btn then
+                        local colorKey = addon.GetEntryColor(entry)
+                        local duration = addon.GetEntryDuration(entry)
+                        if duration > maxDur then maxDur = duration end
+                        addon.ApplyGlowTransition(btn, true, true, duration, colorKey)
+                    end
                 end
             end
         end
         
-        triggerGlows(addon.Profile.spells)
-        triggerGlows(addon.Profile.items)
+        triggerGlows(addon.Profile.spells, true)
+        triggerGlows(addon.Profile.items, false)
         
         if maxDur > 0 then
             C_Timer.After(maxDur + 0.5, function() addon.isTesting = false end)

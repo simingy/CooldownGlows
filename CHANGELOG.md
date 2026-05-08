@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.4] - 2026-05-07
+
+### Fixed
+- **Spec Switching Logic**: Removed an overly broad fallback in `IsSpellTrackable` that caused unlearned spells from inactive specs to be evaluated as trackable. This fixes a bug where inactive spec spells would not fade out in the options UI and would randomly glow on action bars due to shared background cooldowns.
+- **/cdg test Validation**: Updated the test command to strictly validate `IsSpellTrackable` before triggering dummy test glows, ensuring only active spec abilities are flashed during the test sequence.
+
 ## [2.1.3] - 2026-04-22
 
 ### Fixed

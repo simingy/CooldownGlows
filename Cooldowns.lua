@@ -23,9 +23,10 @@ function addon.IsSpellTrackable(spellID)
     -- WoW 12.0+ Primary Checks
     if C_SpellBook.IsSpellKnown(spellID) then return true end
     
-    -- Validity check for spells not in spellbook (e.g. items, toys, or seasonal spells)
-    local info = C_Spell.GetSpellInfo(spellID)
-    return (info and info.name ~= nil)
+    -- Pet spells or other abilities that might not be in the primary spellbook
+    if C_SpellBook.IsSpellKnown(spellID, Enum.SpellBookSpellBank.Pet) then return true end
+    
+    return false
 end
 
 function addon.CheckCooldowns()
