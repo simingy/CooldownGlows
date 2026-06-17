@@ -85,7 +85,7 @@ function addon.FindButtonsByItemID(itemID)
     local seen = {}
     for slot = 1, MAX_ACTION_SLOT do
         if C_ActionBar.HasAction(slot) then
-            local actionType, id = C_Action.GetActionInfo(slot)
+            local actionType, id = GetActionInfo(slot)
             if actionType == "item" and id == itemID then
                 for _, button in ipairs(FindButtonsForSlot(slot)) do
                     if not seen[button] then
@@ -104,7 +104,7 @@ function addon.GetActionBarItems()
     local seen = {}
     for slot = 1, MAX_ACTION_SLOT do
         if C_ActionBar.HasAction(slot) then
-            local actionType, id = C_Action.GetActionInfo(slot)
+            local actionType, id = GetActionInfo(slot)
             if actionType == "item" and id and not seen[id] then
                 seen[id] = true
                 local name, _, _, _, _, _, _, _, _, icon = C_Item.GetItemInfo(id)

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.0] - 2026-06-16
+
+### Changed
+- **Interface version bumped to 120007** (WoW 12.0.7). No backwards compatibility with older versions is maintained.
+
+### Fixed
+- **ActionBars.lua — `GetActionInfo` namespace bug**: `C_Action.GetActionInfo(slot)` is not a valid API. `GetActionInfo` is a standalone global function. This caused a nil-call Lua error whenever the addon scanned action bars for tracked items (`FindButtonsByItemID`, `GetActionBarItems`).
+- **SpellHelperUI.lua — `GetSpellBookItemType` return values**: `C_SpellBook.GetSpellBookItemType` returns three values: `(itemType, actionID, spellID)`. The previous code only captured two, meaning it was using `actionID` (the base spell ID) as the spell ID and silently discarding the actual override `spellID`. Now correctly captures all three and falls back to `actionID` when `spellID` is nil (non-overridden spells).
+- **SpellHelperUI.lua — `info.isPassive` field does not exist**: `C_Spell.GetSpellInfo` returns a `SpellInfo` struct that has no `isPassive` field (confirmed against 12.0.7 API docs). Passive spells were never being filtered out of the spell browser. Replaced with the correct `C_SpellBook.IsSpellBookItemPassive(slot, bank)` call.
+
 ## [2.1.4] - 2026-05-07
 
 ### Fixed

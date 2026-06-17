@@ -20,7 +20,7 @@ These guidelines ensure consistency, performance, and compatibility for the Cool
 
 ## 4. Performance & Combat Safety
 - **Event Strategy**: Due to heavy internal throttling of standard Blizzard events like `SPELL_UPDATE_COOLDOWN` producing multi-second lag queues:
-  - We exclusively rely on an active background `0.1s` (10Hz) polling loop tied to the `OnUpdate` handler.
+  - We exclusively rely on an active background `0.05s` (20Hz) polling loop tied to the `OnUpdate` handler.
   - Native Event bindings are purely restricted to explicit UI refresh hooks (`SPELLS_CHANGED`, `PLAYER_ENTERING_WORLD`) forcing cache rebuilds outside of combat.
 - **Cooldown Polling**: CD checks natively utilize explicit Button frame strings assigned mathematically in the SV tables rather than trying to perform `C_ActionBar` loop lookups, making `10Hz` polling virtually frictionless logic sweeps.
 - **Debug Logging**: All debug prints gated behind `addon.Profile.debug` and `addon.Print` helper. Never spam during combat.

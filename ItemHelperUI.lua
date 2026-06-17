@@ -112,7 +112,6 @@ function addon.ShowItemHelper(activeProfileFrame, profileKey, isEditMode)
         h.durInput:SetText("3")
         
         h.colorLabel = h:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        h.colorLabel = h:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         h.colorLabel:SetPoint("TOPLEFT", h.durLabel, "BOTTOMLEFT", 0, -20)
         h.colorLabel:SetText("Color:")
         

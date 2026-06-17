@@ -324,11 +324,13 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
             if skillLineInfo and skillLineInfo.name ~= "General" then
                 local offset, numSlots = skillLineInfo.itemIndexOffset, skillLineInfo.numSpellBookItems
                 for j = offset + 1, offset + numSlots do
-                    local spellType, spellID = C_SpellBook.GetSpellBookItemType(j, Enum.SpellBookSpellBank.Player)
-                    if (spellType == Enum.SpellBookItemType.Spell or spellType == Enum.SpellBookItemType.FutureSpell) and spellID then
+                    local spellType, actionID, spellID = C_SpellBook.GetSpellBookItemType(j, Enum.SpellBookSpellBank.Player)
+                    spellID = spellID or actionID -- fall back to actionID for non-overridden spells
+                    if spellType == Enum.SpellBookItemType.Spell and spellID then
                         local info = C_Spell.GetSpellInfo(spellID)
                         local isKnown = C_SpellBook.IsSpellKnown(spellID)
-                        if info and info.name and not info.isPassive and isKnown then
+                        local isPassive = C_SpellBook.IsSpellBookItemPassive(j, Enum.SpellBookSpellBank.Player)
+                        if info and info.name and not isPassive and isKnown then
                             table.insert(spellList, {
                                 id = spellID,
                                 name = info.name,
