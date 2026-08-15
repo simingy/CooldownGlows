@@ -1,4 +1,4 @@
-## Interface: 120007
+## Interface: 120100
 ## Title: CooldownGlows
 ## Notes: Flashes a proc glow on action bar buttons when spell cooldowns end.
 ## Author: Simon

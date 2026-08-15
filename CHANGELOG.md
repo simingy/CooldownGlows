@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.0] - 2026-08-14
+
+### Changed
+- **Interface version bumped to 120100** (WoW 12.1.0).
+- **API Validation**: Verified full compatibility with WoW 12.1.0 changes. High-frequency 20Hz polling architecture correctly insulates `isOnGCD` checks against documented engine-level event synchronicity warnings.
+
 ## [2.2.0] - 2026-06-16
 
 ### Changed
