@@ -61,6 +61,10 @@ local function OnEvent(self, event, ...)
                 addon.CreateOptionsFrames()
             end
             
+            if addon.UpdateTrackableSpells then
+                addon.UpdateTrackableSpells()
+            end
+            
             self:UnregisterEvent("ADDON_LOADED")
         end
 
@@ -74,7 +78,9 @@ local function OnEvent(self, event, ...)
         addon.UpdateTrackableSpells()
         if addon.pendingOpenSettings then
             addon.pendingOpenSettings = nil
-            Settings.OpenToCategory(addon.category:GetID())
+            if addon.category then
+                Settings.OpenToCategory(addon.category:GetID())
+            end
         end
         addon.CheckCooldowns()
         addon.CheckItemCooldowns()
@@ -99,6 +105,11 @@ SlashCmdList["COOLDOWNGLOWS"] = function(msg)
         print("|cff00cc00CooldownGlows Test:|r Triggering all tracked glows...")
         if not addon.Profile then print("  Profile not loaded.") return end
         
+        if addon.testTimer then
+            addon.testTimer:Cancel()
+            addon.testTimer = nil
+        end
+
         addon.isTesting = true
         local maxDur = 0
         
@@ -126,7 +137,10 @@ SlashCmdList["COOLDOWNGLOWS"] = function(msg)
         triggerGlows(addon.Profile.items, false)
         
         if maxDur > 0 then
-            C_Timer.After(maxDur + 0.5, function() addon.isTesting = false end)
+            addon.testTimer = C_Timer.NewTimer(maxDur + 0.5, function()
+                addon.isTesting = false
+                addon.testTimer = nil
+            end)
         else
             addon.isTesting = false
         end
@@ -158,11 +172,12 @@ SlashCmdList["COOLDOWNGLOWS"] = function(msg)
     if msg == "" then
         if InCombatLockdown() then
             print("|cffccaa00CooldownGlows:|r Settings will open when you leave combat.")
-            addon.events:RegisterEvent("PLAYER_REGEN_ENABLED")
             addon.pendingOpenSettings = true
             return
         end
-        Settings.OpenToCategory(addon.category:GetID())
+        if addon.category then
+            Settings.OpenToCategory(addon.category:GetID())
+        end
         return
     end
 

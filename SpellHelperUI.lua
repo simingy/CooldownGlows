@@ -82,6 +82,18 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
         h.idInput:SetPoint("RIGHT", h.idLabel, "LEFT", 265, 0)
         h.idInput:SetAutoFocus(false)
         h.idInput:SetNumeric(true)
+        local function AutoSelectButton(spellID)
+            local id = tonumber(spellID)
+            if not id or id <= 0 then return end
+            local found = addon.FindButtonsBySpellID(id)
+            if found and #found > 0 and found[1]:GetName() then
+                local btnName = found[1]:GetName()
+                UIDropDownMenu_SetText(h.btnFrameDD, btnName)
+                h.btnFrameDD.selectedValue = btnName
+            end
+        end
+        h.AutoSelectButton = AutoSelectButton
+
         h.idInput:SetScript("OnEnterPressed", function(self)
             self:ClearFocus()
             UpdateSpellPreview(self:GetText())
@@ -89,6 +101,7 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
         h.idInput:SetScript("OnTextChanged", function(self, isUserInput)
             if isUserInput then
                 UpdateSpellPreview(self:GetText())
+                AutoSelectButton(self:GetText())
             end
         end)
         
@@ -259,7 +272,16 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
             if btn then
                 local duration = tonumber(h.durInput:GetText()) or 3
                 local colorKey = h.colorDD.selectedKey or "default"
+                if addon.testTimer then
+                    addon.testTimer:Cancel()
+                    addon.testTimer = nil
+                end
+                addon.isTesting = true
                 addon.ApplyGlowTransition(btn, true, true, duration, colorKey)
+                addon.testTimer = C_Timer.NewTimer(duration + 0.5, function()
+                    addon.isTesting = false
+                    addon.testTimer = nil
+                end)
             else
                 addon.Print("Error: Cannot test, frame not found.")
             end
@@ -309,9 +331,9 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
     local content = addon.SpellHelperFrame.content
 
     if not addon.SpellHelperFrame.spellButtonsCreated then
-        for _, child in ipairs({content:GetChildren()}) do
-            child:Hide()
-            child:SetParent(nil)
+        addon.SpellHelperFrame.spellRows = addon.SpellHelperFrame.spellRows or {}
+        for _, r in ipairs(addon.SpellHelperFrame.spellRows) do
+            r:Hide()
         end
         addon.SpellHelperFrame.spellButtonsCreated = true
         
@@ -344,26 +366,40 @@ function addon.ShowSpellHelper(activeProfileFrame, profileKey, isEditMode)
         
         table.sort(spellList, function(a, b) return a.name < b.name end)
         
-        for _, spell in ipairs(spellList) do
-            local row = CreateFrame("Button", nil, content)
-            row:SetSize(280, 20)
-            row:SetPoint("TOPLEFT", 0, yOffset)
+        for idx, spell in ipairs(spellList) do
+            local row = addon.SpellHelperFrame.spellRows[idx]
+            if not row then
+                row = CreateFrame("Button", nil, content)
+                row:SetSize(280, 20)
+                local highlight = row:CreateTexture(nil, "HIGHLIGHT")
+                highlight:SetAllPoints()
+                highlight:SetColorTexture(1, 1, 1, 0.2)
+                local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+                nameText:SetPoint("LEFT", 5, 0)
+                nameText:SetWidth(260)
+                nameText:SetJustifyH("LEFT")
+                row.nameText = nameText
+                addon.SpellHelperFrame.spellRows[idx] = row
+            end
             
-            local highlight = row:CreateTexture(nil, "HIGHLIGHT")
-            highlight:SetAllPoints()
-            highlight:SetColorTexture(1, 1, 1, 0.2)
+            row:SetPoint("TOPLEFT", 0, yOffset)
+            row.nameText:SetText(string.format("|T%s:16|t %s |cff888888(%s)|r", spell.icon, spell.name, spell.id))
             
             row:SetScript("OnClick", function()
                 addon.SpellHelperFrame.idInput:SetText(tostring(spell.id))
                 addon.SpellHelperFrame.idInput:ClearFocus()
                 addon.SpellHelperFrame.UpdateSpellPreview(tostring(spell.id))
+                local found = addon.FindButtonsBySpellID(spell.id)
+                if found and #found > 0 and found[1]:GetName() then
+                    local btnName = found[1]:GetName()
+                    UIDropDownMenu_SetText(addon.SpellHelperFrame.btnFrameDD, btnName)
+                    addon.SpellHelperFrame.btnFrameDD.selectedValue = btnName
+                else
+                    UIDropDownMenu_SetText(addon.SpellHelperFrame.btnFrameDD, "")
+                    addon.SpellHelperFrame.btnFrameDD.selectedValue = nil
+                end
             end)
-            
-            local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-            nameText:SetPoint("LEFT", 5, 0)
-            nameText:SetWidth(260)
-            nameText:SetJustifyH("LEFT")
-            nameText:SetText(string.format("|T%s:16|t %s |cff888888(%s)|r", spell.icon, spell.name, spell.id))
+            row:Show()
             
             yOffset = yOffset - 22
         end

@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.1] - 2026-09-05
+
+### Fixed
+- **Glow Animation & Rendering**:
+  - Explicitly targeted Flipbook animations using `SetTarget()` on textures, resolving an issue where the proc start and loop animations failed to run.
+  - Implemented a dedicated `StartGlow()` method on glow frames that smoothly transitions from the 0.3s burst flipbook to the looping flipbook.
+  - Hardened against zero/nil button sizing on hidden or newly initialized buttons with safe fallbacks.
+  - Aligned frame strata and levels with guidelines (`button:GetFrameLevel() + 8`), ensuring glows appear cleanly above action button overlays without drawing over game tooltips or modal dialogs.
+  - Standardized `SetDesaturated` calls with boolean values (`true`/`false`).
+  - Added parent resetting (`frame:SetParent(UIParent)`) in the frame pool resetter to eliminate dangling references.
+- **Cooldown & Charge Tracking**:
+  - Item cooldowns now inspect `C_ActionBar.GetActionCooldown` first, reading `NeverSecret` boolean fields (`isActive`, `isOnGCD`) directly from the action bar engine to eliminate secret number lockouts.
+  - Added dynamic override support in `CheckCooldowns()` using `C_Spell.GetOverrideSpell()`, ensuring talent and stance overrides (e.g., Incarnation, Word of Glory) are tracked accurately.
+  - Modernized multi-charge tracking using `chargeInfo.isActive` (`NeverSecret = true`) to detect recharging state without secret number taint.
+  - Isolated `/cdg test` and helper UI tests with an `addon.isTesting` guard and dedicated timer cleanup to prevent 20Hz polling sweeps from wiping active test glows.
+- **Action Bar Scans & Macros**:
+  - Added fallback action slot scanning in `FindButtonsBySpellID` that detects macro-based spells (`actionType == "macro"` and `subType == "spell"`), matching Blizzard's internal alert logic.
+  - Hardened `GetActionBarItems` with an `InCombatLockdown()` guard and non-nil item name fallbacks via `C_Item.GetItemNameByID`.
+- **UI Memory Leaks & UX**:
+  - Implemented row frame recycling in both `SpellHelperUI` and `ItemHelperUI`, preventing frame leaks and GC churn when browsing spells or items.
+  - Clicking a spell or item row—or typing an ID into the input editbox—now automatically finds and selects the mapped action button in the Target Frame dropdown.
+  - Removing a tracked spell or item now immediately extinguishes active glows and cancels running timers on that button.
+  - Synchronized tracked spell caches when creating or deleting character profile overrides and on `ADDON_LOADED`.
+
 ## [2.3.0] - 2026-08-14
 
 ### Changed

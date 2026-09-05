@@ -75,6 +75,25 @@ function addon.FindButtonsBySpellID(spellID)
             end
         end
     end
+
+    -- Fallback: scan action slots directly (handles macros and bar replacement addons)
+    if #result == 0 then
+        for slot = 1, MAX_ACTION_SLOT do
+            if C_ActionBar.HasAction(slot) then
+                local actionType, id, subType = GetActionInfo(slot)
+                if (actionType == "spell" and (id == spellID or (overrideID and id == overrideID))) or
+                   (actionType == "macro" and subType == "spell" and (id == spellID or (overrideID and id == overrideID))) then
+                    for _, btn in ipairs(FindButtonsForSlot(slot)) do
+                        if not seen[btn] then
+                            seen[btn] = true
+                            result[#result + 1] = btn
+                        end
+                    end
+                end
+            end
+        end
+    end
+
     return result
 end
 
@@ -100,6 +119,8 @@ function addon.FindButtonsByItemID(itemID)
 end
 
 function addon.GetActionBarItems()
+    if InCombatLockdown() then return {} end
+
     local items = {}
     local seen = {}
     for slot = 1, MAX_ACTION_SLOT do
@@ -107,14 +128,13 @@ function addon.GetActionBarItems()
             local actionType, id = GetActionInfo(slot)
             if actionType == "item" and id and not seen[id] then
                 seen[id] = true
-                local name, _, _, _, _, _, _, _, _, icon = C_Item.GetItemInfo(id)
-                if name then
-                    items[#items + 1] = {
-                        itemID = id,
-                        name = name,
-                        icon = icon or 134400
-                    }
-                end
+                local name = C_Item.GetItemNameByID(id) or C_Item.GetItemInfo(id) or ("Item " .. id)
+                local icon = C_Item.GetItemIconByID(id) or 134400
+                items[#items + 1] = {
+                    itemID = id,
+                    name = name,
+                    icon = icon
+                }
             end
         end
     end

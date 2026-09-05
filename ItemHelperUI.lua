@@ -90,6 +90,18 @@ function addon.ShowItemHelper(activeProfileFrame, profileKey, isEditMode)
         h.idInput:SetPoint("RIGHT", h.idLabel, "LEFT", 265, 0)
         h.idInput:SetAutoFocus(false)
         h.idInput:SetNumeric(true)
+        local function AutoSelectButton(itemID)
+            local id = tonumber(itemID)
+            if not id or id <= 0 then return end
+            local found = addon.FindButtonsByItemID(id)
+            if found and #found > 0 and found[1]:GetName() then
+                local btnName = found[1]:GetName()
+                UIDropDownMenu_SetText(h.btnFrameDD, btnName)
+                h.btnFrameDD.selectedValue = btnName
+            end
+        end
+        h.AutoSelectButton = AutoSelectButton
+
         h.idInput:SetScript("OnEnterPressed", function(self)
             self:ClearFocus()
             UpdateItemPreview(self:GetText())
@@ -97,6 +109,7 @@ function addon.ShowItemHelper(activeProfileFrame, profileKey, isEditMode)
         h.idInput:SetScript("OnTextChanged", function(self, isUserInput)
             if isUserInput then
                 UpdateItemPreview(self:GetText())
+                AutoSelectButton(self:GetText())
             end
         end)
         
@@ -264,7 +277,16 @@ function addon.ShowItemHelper(activeProfileFrame, profileKey, isEditMode)
             if btn then
                 local duration = tonumber(h.durInput:GetText()) or 3
                 local colorKey = h.colorDD.selectedKey or "default"
+                if addon.testTimer then
+                    addon.testTimer:Cancel()
+                    addon.testTimer = nil
+                end
+                addon.isTesting = true
                 addon.ApplyGlowTransition(btn, true, true, duration, colorKey)
+                addon.testTimer = C_Timer.NewTimer(duration + 0.5, function()
+                    addon.isTesting = false
+                    addon.testTimer = nil
+                end)
             else
                 addon.Print("Error: Cannot test, frame not found.")
             end
@@ -313,8 +335,12 @@ function addon.ShowItemHelper(activeProfileFrame, profileKey, isEditMode)
     end
     
     local content = addon.ItemHelperFrame.content
-    for _, child in ipairs({content:GetChildren()}) do
-        child:Hide()
+    addon.ItemHelperFrame.itemRows = addon.ItemHelperFrame.itemRows or {}
+    for _, r in ipairs(addon.ItemHelperFrame.itemRows) do
+        r:Hide()
+    end
+    if addon.ItemHelperFrame.noItemsText then
+        addon.ItemHelperFrame.noItemsText:Hide()
     end
 
     -- Get action bars items
@@ -323,34 +349,52 @@ function addon.ShowItemHelper(activeProfileFrame, profileKey, isEditMode)
     local yOffset = -5
     
     if #items == 0 then
-        local noItems = content:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        noItems:SetPoint("TOP", 0, yOffset)
-        noItems:SetText("|cff888888No items found on your action bars.|r")
+        if not addon.ItemHelperFrame.noItemsText then
+            local noItems = content:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            noItems:SetPoint("TOP", 0, yOffset)
+            noItems:SetText("|cff888888No items found on your action bars.|r")
+            addon.ItemHelperFrame.noItemsText = noItems
+        end
+        addon.ItemHelperFrame.noItemsText:Show()
         content:SetHeight(30)
         addon.ItemHelperFrame:Show()
         return
     end
     
-    for _, item in ipairs(items) do
-        local row = CreateFrame("Button", nil, content)
-        row:SetSize(280, 20)
+    for idx, item in ipairs(items) do
+        local row = addon.ItemHelperFrame.itemRows[idx]
+        if not row then
+            row = CreateFrame("Button", nil, content)
+            row:SetSize(280, 20)
+            local highlight = row:CreateTexture(nil, "HIGHLIGHT")
+            highlight:SetAllPoints()
+            highlight:SetColorTexture(1, 1, 0.6, 0.15)
+            local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+            nameText:SetPoint("LEFT", 5, 0)
+            nameText:SetWidth(260)
+            nameText:SetJustifyH("LEFT")
+            row.nameText = nameText
+            addon.ItemHelperFrame.itemRows[idx] = row
+        end
+
         row:SetPoint("TOPLEFT", 0, yOffset)
-        
-        local highlight = row:CreateTexture(nil, "HIGHLIGHT")
-        highlight:SetAllPoints()
-        highlight:SetColorTexture(1, 1, 0.6, 0.15)
+        row.nameText:SetText(string.format("|T%s:16|t |cffccaa00%s|r |cff888888(%s)|r", item.icon, item.name, item.itemID))
         
         row:SetScript("OnClick", function()
             addon.ItemHelperFrame.idInput:SetText(tostring(item.itemID))
             addon.ItemHelperFrame.idInput:ClearFocus()
             addon.ItemHelperFrame.UpdateItemPreview(tostring(item.itemID))
+            local found = addon.FindButtonsByItemID(item.itemID)
+            if found and #found > 0 and found[1]:GetName() then
+                local btnName = found[1]:GetName()
+                UIDropDownMenu_SetText(addon.ItemHelperFrame.btnFrameDD, btnName)
+                addon.ItemHelperFrame.btnFrameDD.selectedValue = btnName
+            else
+                UIDropDownMenu_SetText(addon.ItemHelperFrame.btnFrameDD, "")
+                addon.ItemHelperFrame.btnFrameDD.selectedValue = nil
+            end
         end)
-        
-        local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        nameText:SetPoint("LEFT", 5, 0)
-        nameText:SetWidth(260)
-        nameText:SetJustifyH("LEFT")
-        nameText:SetText(string.format("|T%s:16|t |cffccaa00%s|r |cff888888(%s)|r", item.icon, item.name, item.itemID))
+        row:Show()
         
         yOffset = yOffset - 22
     end

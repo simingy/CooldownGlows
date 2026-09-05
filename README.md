@@ -13,7 +13,7 @@ Highlights action bar buttons with a proc glow when spell/item cooldowns finish.
 - **Duration control** — Auto-hide glow after configurable seconds
 - **Combat-only mode** — Suppress glows outside combat
 - **Manual Assignment** — Precisely map abilities strictly to your expected UI layout targets.
-- **Precision Tracking** — Operates natively on a `.1s` active background evaluation hook for maximum accuracy bypassing broken throttled Events.
+- **Precision Tracking** — Operates natively on a `.05s (20Hz)` active background evaluation hook for maximum accuracy bypassing broken throttled Events.
 - **Combat-safe** — No taint-prone API calls; uses visual cooldown state and static assignment mappings for unbreakable in-combat stability.
 - **Zero dependencies** — Self-contained proc glow system, no external libraries required
 - **Debug tools** — `/cdg cache` and `/cdg test` for troubleshooting
@@ -46,4 +46,4 @@ Copy `CooldownGlows/` into your `Interface/AddOns/` folder, or install via [Curs
 
 **No external dependencies required.** The addon includes its own self-contained glow system.
 
-**Compatibility:** WoW 12.0.5 (Midnight) and later.
+**Compatibility:** WoW 12.0+ (Midnight) and later.

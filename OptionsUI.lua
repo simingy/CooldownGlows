@@ -232,6 +232,13 @@ local function BuildProfileContent(container, profileKey)
                 end)
                 removeBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
                 removeBtn:SetScript("OnClick", function()
+                    local btn = spell.button and _G[spell.button]
+                    if btn then
+                        addon.HideGlow(btn)
+                        addon.CancelButtonTimer(btn)
+                    end
+                    addon.cdStates[spell.id] = nil
+                    addon.trackableSpellsCache[spell.id] = nil
                     profile.spells[spell.id] = nil
                     RefreshTrackedList()
                     if isCurrentPlayer then
@@ -349,6 +356,12 @@ local function BuildProfileContent(container, profileKey)
                 end)
                 removeBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
                 removeBtn:SetScript("OnClick", function()
+                    local btn = item.button and _G[item.button]
+                    if btn then
+                        addon.HideGlow(btn)
+                        addon.CancelButtonTimer(btn)
+                    end
+                    addon.itemCdStates[item.id] = nil
                     profile.items[item.id] = nil
                     RefreshTrackedList()
                     if isCurrentPlayer then
@@ -759,6 +772,7 @@ function addon.CreateOptionsFrames()
             addon.HideGlow(btn)
         end
         wipe(addon.activeTimers)
+        if addon.UpdateTrackableSpells then addon.UpdateTrackableSpells() end
         RefreshCharTab()
         addon.CheckCooldowns()
         addon.CheckItemCooldowns()
@@ -776,6 +790,7 @@ function addon.CreateOptionsFrames()
             addon.HideGlow(btn)
         end
         wipe(addon.activeTimers)
+        if addon.UpdateTrackableSpells then addon.UpdateTrackableSpells() end
         RefreshCharTab()
         addon.CheckCooldowns()
         addon.CheckItemCooldowns()

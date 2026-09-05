@@ -22,6 +22,12 @@ function addon.IsSpellTrackable(spellID)
     
     -- WoW 12.0+ Primary Checks
     if C_SpellBook.IsSpellKnown(spellID) then return true end
+    if C_SpellBook.IsSpellKnownOrOverridesKnown and C_SpellBook.IsSpellKnownOrOverridesKnown(spellID) then return true end
+
+    local overrideID = C_Spell.GetOverrideSpell(spellID)
+    if overrideID and overrideID ~= spellID and C_SpellBook.IsSpellKnown(overrideID) then
+        return true
+    end
     
     -- Pet spells or other abilities that might not be in the primary spellbook
     if C_SpellBook.IsSpellKnown(spellID, Enum.SpellBookSpellBank.Pet) then return true end
@@ -31,6 +37,7 @@ end
 
 function addon.CheckCooldowns()
     if not addon.Profile or not addon.Profile.spells then return end
+    if addon.isTesting then return end
     local suppressed = addon.IsCombatOnly()
     
     -- Precise polling check for spells
@@ -38,6 +45,11 @@ function addon.CheckCooldowns()
         local btn = entry.button and _G[entry.button] or nil
         
         local isTrackable = addon.trackableSpellsCache[spellID]
+        if isTrackable == nil then
+            isTrackable = addon.IsSpellTrackable(spellID)
+            addon.trackableSpellsCache[spellID] = isTrackable
+        end
+
         if not isTrackable then
             if btn then
                 addon.HideGlow(btn)
@@ -48,7 +60,11 @@ function addon.CheckCooldowns()
             local duration = addon.GetEntryDuration(entry)
             local colorKey = addon.GetEntryColor(entry)
             
-            local cdInfo = C_Spell.GetSpellCooldown(spellID)
+            local effectiveSpellID = C_Spell.GetOverrideSpell(spellID) or spellID
+            local cdInfo = C_Spell.GetSpellCooldown(effectiveSpellID)
+            if (not cdInfo or not cdInfo.isActive) and effectiveSpellID ~= spellID then
+                cdInfo = C_Spell.GetSpellCooldown(spellID)
+            end
             
             local onCooldown = false
             if cdInfo and cdInfo.isActive and not cdInfo.isOnGCD then
@@ -58,8 +74,11 @@ function addon.CheckCooldowns()
             -- Max Charges Only: Even if not on a primary cooldown (or just on GCD), 
             -- check if any charges are still recharging.
             if not onCooldown then
-                local chargeInfo = C_Spell.GetSpellCharges(spellID)
-                if chargeInfo and chargeInfo.isActive and chargeInfo.maxCharges > 1 then
+                local chargeInfo = C_Spell.GetSpellCharges(effectiveSpellID)
+                if (not chargeInfo or not chargeInfo.isActive) and effectiveSpellID ~= spellID then
+                    chargeInfo = C_Spell.GetSpellCharges(spellID)
+                end
+                if chargeInfo and chargeInfo.isActive and chargeInfo.maxCharges and chargeInfo.maxCharges > 1 then
                     onCooldown = true
                 end
             end
@@ -67,7 +86,7 @@ function addon.CheckCooldowns()
             local wasCoolingDown = addon.cdStates[spellID]
             local isReady = not onCooldown
             
-            if not addon.isTesting and btn then
+            if btn then
                 if suppressed then
                     addon.HideGlow(btn)
                     addon.CancelButtonTimer(btn)
@@ -84,6 +103,7 @@ end
 
 function addon.CheckItemCooldowns()
     if not addon.Profile or not addon.Profile.items then return end
+    if addon.isTesting then return end
     local suppressed = addon.IsCombatOnly()
     
     for itemID, entry in pairs(addon.Profile.items) do
@@ -91,28 +111,34 @@ function addon.CheckItemCooldowns()
         local colorKey = addon.GetEntryColor(entry)
         local btn = entry.button and _G[entry.button] or nil
         
-        local start, dur, enable = C_Item.GetItemCooldown(itemID)
-        
-        -- Use pcall for magnitude comparisons as items return secret numbers in tainted contexts
         local onCooldown = false
-        if start and dur then
-            local success, result = pcall(function() return start > 0 and dur > 1.5 end)
-            -- If secret or failed, assume on cooldown for safety
-            onCooldown = (not success) or result
+        local act = btn and (btn._state_action or btn.action)
+        if act and type(act) == "number" then
+            -- Prefer C_ActionBar.GetActionCooldown: returns NeverSecret booleans isActive and isOnGCD
+            local cdInfo = C_ActionBar.GetActionCooldown(act)
+            if cdInfo and cdInfo.isActive and not cdInfo.isOnGCD then
+                onCooldown = true
+            end
+        else
+            local start, dur, enable = C_Item.GetItemCooldown(itemID)
+            if enable then
+                local success, result = pcall(function() return start > 0 and dur > 1.5 end)
+                if success then
+                    onCooldown = result
+                else
+                    onCooldown = true
+                end
+            end
         end
         
         local wasCoolingDown = addon.itemCdStates[itemID]
         local isReady = not onCooldown
         
-        if not addon.isTesting and btn then
+        if btn then
             if suppressed then
                 addon.HideGlow(btn)
                 addon.CancelButtonTimer(btn)
             else
-                if isReady and wasCoolingDown then
-                    local name = C_Item.GetItemInfo(itemID)
-                    addon.Print("Item READY: %s (ID: %d)", name or "Unknown", itemID)
-                end
                 addon.ApplyGlowTransition(btn, isReady, wasCoolingDown, glowDuration, colorKey)
             end
         end

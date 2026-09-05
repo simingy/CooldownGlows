@@ -4,7 +4,7 @@ Lessons learned building this addon. Reference if recreating.
 
 ## Core Architecture
 
-**Polling-driven precision.** Relies entirely on a constant 10 Hz (0.1s interval) background evaluation loop inside `Core.lua`. The reactionary `SPELL_UPDATE_COOLDOWN` event paradigm inherently falls victim to throttling lag queues (2-3 second delays); evaluating natively guarantees perfect timing mappings without missing edge frames.
+**Polling-driven precision.** Relies entirely on a constant 20 Hz (0.05s interval) background evaluation loop inside `Core.lua`. The reactionary `SPELL_UPDATE_COOLDOWN` event paradigm inherently falls victim to throttling lag queues (2-3 second delays); evaluating natively guarantees perfect timing mappings without missing edge frames.
 
 **Data format.** Profile entries are `{duration=N, color="key"}` tables.
 
@@ -14,7 +14,7 @@ Lessons learned building this addon. Reference if recreating.
 
 **Charge handling.** Spells with charges (e.g. Fire Blast) only glow when maximum charges are reached. This is determined via the `isActive` boolean on `C_Spell.GetSpellCharges()`, which is `NeverSecret` and safe to read in combat. No custom charge threshold support; max charges only.
 
-**Self-contained glow system.** The addon includes its own proc glow implementation in `Glows.lua`, ported from LibCustomGlow-1.0's ProcGlow logic. It uses Blizzard's native Flipbook atlases (`UI-HUD-ActionBar-Proc-Start-Flipbook`, `UI-HUD-ActionBar-Proc-Loop-Flipbook`) with `SetDesaturated(1)` + `SetVertexColor()` for custom colors. Glow frames are managed via `CreateFramePool` for memory efficiency.
+**Self-contained glow system.** The addon includes its own proc glow implementation in `Glows.lua`, ported from LibCustomGlow-1.0's ProcGlow logic. It uses Blizzard's native Flipbook atlases (`UI-HUD-ActionBar-Proc-Start-Flipbook`, `UI-HUD-ActionBar-Proc-Loop-Flipbook`) with `SetDesaturated(true/false)` + `SetVertexColor()` for custom colors. Glow frames are managed via `CreateFramePool` for memory efficiency.
 
 ## What Works
 
@@ -23,7 +23,8 @@ Lessons learned building this addon. Reference if recreating.
 - **`C_Spell.GetSpellCooldown(spellID).isOnGCD`** — `NeverSecret = true` (12.0.5+). The modern standard for identifying GCD states without touching restricted timing values.
 - **`C_Spell.GetSpellCooldown(spellID).isActive`** — `NeverSecret = true`, safe boolean for CD state.
 - **`C_Spell.GetSpellCharges(spellID).isActive`** — `NeverSecret = true`, safe boolean for charge state.
-- **`C_Item.GetItemCooldown(itemID)`** — returns start, duration, enable. Magnitude comparisons MUST be wrapped in `pcall` for 12.x combat safety.
+- **`C_ActionBar.GetActionCooldown(slot)`** — Primary taint-safe mechanism for item button cooldown detection (`isActive` and `isOnGCD` are `NeverSecret`).
+- **`C_Item.GetItemCooldown(itemID)`** — fallback for non-action button item checks; magnitude comparisons wrapped in `pcall` for safety.
 - **`C_SpellBook`** — The exclusive namespace for spell validity and knowledge checks. Legacy `IsSpellKnown` is removed.
 - **Self-contained ProcGlow** with `SetDesaturated(1)` + `SetVertexColor()` — accurate custom colors, no library conflicts
 - **`CreateFramePool("Frame", UIParent, nil, resetter)`** — efficient glow frame pooling
@@ -67,7 +68,7 @@ Lessons learned building this addon. Reference if recreating.
 
 - **`C_SpellBook`** — Modern replacement for legacy `GetSpellInfo` and `IsSpellKnown` checks.
 - **`C_Spell.GetSpellCooldown(spellID)`** — Returns a table (12.0.5+). Ensure robust nil handling. Requires WoW 12.0.5 minimum.
-- **`TOOLTIP` Stratum Enforcement** — Necessary in 12.0.5 to prevent glows from being clipped or hidden by the refactored action bar HUD overlays.
+- **Frame Leveling (`button:GetFrameLevel() + 8`)** — Inherits parent button strata and elevates 8 frame levels above action button textures and cooldown frames without occluding tooltips or dialogs.
 - **Animation De-bouncing** — High-precision loops (0.05s) must verify `frame:IsVisible()` before re-triggering `ShowGlow` to prevent "invisible" animation restarts.
 - **`C_Item.GetItemInfo`** is async — may return nil on first call. Items resolve on next refresh.
 - **SavedVariables** (`CooldownGlowsDB`) — not available until `ADDON_LOADED`. Legacy `CDglowDB` migrations are no longer supported in v2.1.2+.
@@ -79,8 +80,8 @@ Lessons learned building this addon. Reference if recreating.
 |------|------|---------------|
 | `Core.lua` | Events, profile init, slash cmds | Loaded last (depends on all others). Unregisters ADDON_LOADED after init. |
 | `Glows.lua` | Color palette, self-contained proc glow, `ApplyGlowTransition` | Loaded first. Zero dependencies. |
-| `ActionBars.lua` | (DEPRECATED) Legacy auto-discovery cache framework. Functionality migrated natively to Options Profile registrations. |
+| `ActionBars.lua` | Button mapping, macro fallback detection, and combat-safe item listings | InCombatLockdown guard on item scans. |
 | `Cooldowns.lua` | CD state tracking, charge detection, glow triggers | State-transition only. Uses `isActive` boolean, not secret numbers. |
 | `OptionsUI.lua` | Tab UI, color dropdowns, profile editing | Stores `addon.OptionsFrame` for helper hooks |
-| `SpellHelperUI.lua` | Spellbook browser | Filters passives, sorts alpha. |
-| `ItemHelperUI.lua` | Action bar item browser | Only shows `actionType=="item"` |
+| `SpellHelperUI.lua` | Spellbook browser | Filters passives, sorts alpha, recycles row frames. |
+| `ItemHelperUI.lua` | Action bar item browser | Only shows `actionType=="item"`, recycles row frames. |
